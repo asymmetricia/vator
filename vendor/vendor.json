@@ -1,0 +1,61 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "RjzF7uLz+4L6i2XRsIba3mTvdkI=",
+			"path": "github.com/jrmycanady/nokiahealth",
+			"revision": "a196ed8e0c2d159d9b19beba69e77b2e15eca4a4",
+			"revisionTime": "2017-12-04T02:46:11Z"
+		},
+		{
+			"checksumSHA1": "eEZGvTRDX2HtUdjU7heRzI9Yti8=",
+			"path": "github.com/jrmycanady/nokiahealth/enum/devtype",
+			"revision": "a196ed8e0c2d159d9b19beba69e77b2e15eca4a4",
+			"revisionTime": "2017-12-04T02:46:11Z"
+		},
+		{
+			"checksumSHA1": "L5oktjhDb3W0euRkKX7/n5ew5PU=",
+			"path": "github.com/jrmycanady/nokiahealth/enum/meastype",
+			"revision": "a196ed8e0c2d159d9b19beba69e77b2e15eca4a4",
+			"revisionTime": "2017-12-04T02:46:11Z"
+		},
+		{
+			"checksumSHA1": "/vKbEuxSf9gDywvllU4WG+ekeCM=",
+			"path": "github.com/jrmycanady/nokiahealth/enum/sleepstate",
+			"revision": "a196ed8e0c2d159d9b19beba69e77b2e15eca4a4",
+			"revisionTime": "2017-12-04T02:46:11Z"
+		},
+		{
+			"checksumSHA1": "cys3R25VCzGOLPN5mneWCYv9uhk=",
+			"path": "github.com/jrmycanady/nokiahealth/enum/status",
+			"revision": "a196ed8e0c2d159d9b19beba69e77b2e15eca4a4",
+			"revisionTime": "2017-12-04T02:46:11Z"
+		},
+		{
+			"checksumSHA1": "7NYgciZcWnkRpe6qPW2EWcQ/IbQ=",
+			"path": "github.com/jrmycanady/nokiahealth/enum/workouttype",
+			"revision": "a196ed8e0c2d159d9b19beba69e77b2e15eca4a4",
+			"revisionTime": "2017-12-04T02:46:11Z"
+		},
+		{
+			"checksumSHA1": "vB550SgjaspWGPVUR4ujr20yjtY=",
+			"path": "github.com/jrmycanady/oauth1",
+			"revision": "73a1e3b0e8e14353439867a901f0650ac0ae5be3",
+			"revisionTime": "2017-11-27T13:54:07Z"
+		},
+		{
+			"checksumSHA1": "BoXdUBWB8UnSlFlbnuTQaPqfCGk=",
+			"path": "github.com/op/go-logging",
+			"revision": "970db520ece77730c7e4724c61121037378659d9",
+			"revisionTime": "2016-03-15T20:05:05Z"
+		},
+		{
+			"checksumSHA1": "GtamqiJoL7PGHsN454AoffBFMa8=",
+			"path": "golang.org/x/net/context",
+			"revision": "2fb46b16b8dda405028c50f7c7f0f9dd1fa6bfb1",
+			"revisionTime": "2018-02-02T11:17:09Z"
+		}
+	],
+	"rootPath": "github.com/pdbogen/vator"
+}
