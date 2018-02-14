@@ -3,40 +3,40 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "RjzF7uLz+4L6i2XRsIba3mTvdkI=",
+			"checksumSHA1": "rM3fznNL5e2LwuTgpQbrHqDn7HY=",
 			"path": "github.com/jrmycanady/nokiahealth",
-			"revision": "a196ed8e0c2d159d9b19beba69e77b2e15eca4a4",
-			"revisionTime": "2017-12-04T02:46:11Z"
+			"revision": "aacb7d7e68e68ff94e31f5a4ba49ff9beba0b7ea",
+			"revisionTime": "2018-02-05T17:15:01Z"
 		},
 		{
 			"checksumSHA1": "eEZGvTRDX2HtUdjU7heRzI9Yti8=",
 			"path": "github.com/jrmycanady/nokiahealth/enum/devtype",
-			"revision": "a196ed8e0c2d159d9b19beba69e77b2e15eca4a4",
-			"revisionTime": "2017-12-04T02:46:11Z"
+			"revision": "aacb7d7e68e68ff94e31f5a4ba49ff9beba0b7ea",
+			"revisionTime": "2018-02-05T17:15:01Z"
 		},
 		{
 			"checksumSHA1": "L5oktjhDb3W0euRkKX7/n5ew5PU=",
 			"path": "github.com/jrmycanady/nokiahealth/enum/meastype",
-			"revision": "a196ed8e0c2d159d9b19beba69e77b2e15eca4a4",
-			"revisionTime": "2017-12-04T02:46:11Z"
+			"revision": "aacb7d7e68e68ff94e31f5a4ba49ff9beba0b7ea",
+			"revisionTime": "2018-02-05T17:15:01Z"
 		},
 		{
 			"checksumSHA1": "/vKbEuxSf9gDywvllU4WG+ekeCM=",
 			"path": "github.com/jrmycanady/nokiahealth/enum/sleepstate",
-			"revision": "a196ed8e0c2d159d9b19beba69e77b2e15eca4a4",
-			"revisionTime": "2017-12-04T02:46:11Z"
+			"revision": "aacb7d7e68e68ff94e31f5a4ba49ff9beba0b7ea",
+			"revisionTime": "2018-02-05T17:15:01Z"
 		},
 		{
 			"checksumSHA1": "cys3R25VCzGOLPN5mneWCYv9uhk=",
 			"path": "github.com/jrmycanady/nokiahealth/enum/status",
-			"revision": "a196ed8e0c2d159d9b19beba69e77b2e15eca4a4",
-			"revisionTime": "2017-12-04T02:46:11Z"
+			"revision": "aacb7d7e68e68ff94e31f5a4ba49ff9beba0b7ea",
+			"revisionTime": "2018-02-05T17:15:01Z"
 		},
 		{
 			"checksumSHA1": "7NYgciZcWnkRpe6qPW2EWcQ/IbQ=",
 			"path": "github.com/jrmycanady/nokiahealth/enum/workouttype",
-			"revision": "a196ed8e0c2d159d9b19beba69e77b2e15eca4a4",
-			"revisionTime": "2017-12-04T02:46:11Z"
+			"revision": "aacb7d7e68e68ff94e31f5a4ba49ff9beba0b7ea",
+			"revisionTime": "2018-02-05T17:15:01Z"
 		},
 		{
 			"checksumSHA1": "vB550SgjaspWGPVUR4ujr20yjtY=",
@@ -53,8 +53,8 @@
 		{
 			"checksumSHA1": "GtamqiJoL7PGHsN454AoffBFMa8=",
 			"path": "golang.org/x/net/context",
-			"revision": "2fb46b16b8dda405028c50f7c7f0f9dd1fa6bfb1",
-			"revisionTime": "2018-02-02T11:17:09Z"
+			"revision": "f5dfe339be1d06f81b22525fe34671ee7d2c8904",
+			"revisionTime": "2018-02-04T03:50:36Z"
 		}
 	],
 	"rootPath": "github.com/pdbogen/vator"
