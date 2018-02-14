@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "gZSkXrkqUr2YeNM8kr21D6rTx4s=",
+			"path": "github.com/coreos/bbolt",
+			"revision": "ee30b748bcfbd74ec1d8439ae8fd4f9123a5c94e",
+			"revisionTime": "2018-01-18T18:15:22Z"
+		},
+		{
 			"checksumSHA1": "rM3fznNL5e2LwuTgpQbrHqDn7HY=",
 			"path": "github.com/jrmycanady/nokiahealth",
 			"revision": "aacb7d7e68e68ff94e31f5a4ba49ff9beba0b7ea",
@@ -51,10 +57,29 @@
 			"revisionTime": "2016-03-15T20:05:05Z"
 		},
 		{
+			"checksumSHA1": "vE43s37+4CJ2CDU6TlOUOYE0K9c=",
+			"path": "golang.org/x/crypto/bcrypt",
+			"revision": "81372b2fc2f10bef2a7f338da115c315a56b2726",
+			"revisionTime": "2016-09-13T19:28:34Z"
+		},
+		{
+			"checksumSHA1": "JsJdKXhz87gWenMwBeejTOeNE7k=",
+			"path": "golang.org/x/crypto/blowfish",
+			"revision": "81372b2fc2f10bef2a7f338da115c315a56b2726",
+			"revisionTime": "2016-09-13T19:28:34Z"
+		},
+		{
 			"checksumSHA1": "GtamqiJoL7PGHsN454AoffBFMa8=",
 			"path": "golang.org/x/net/context",
 			"revision": "f5dfe339be1d06f81b22525fe34671ee7d2c8904",
 			"revisionTime": "2018-02-04T03:50:36Z"
+		},
+		{
+			"checksumSHA1": "CNHEeGnucEUlTHJrLS2kHtfNbws=",
+			"origin": "github.com/coreos/bbolt/vendor/golang.org/x/sys/unix",
+			"path": "golang.org/x/sys/unix",
+			"revision": "ee30b748bcfbd74ec1d8439ae8fd4f9123a5c94e",
+			"revisionTime": "2018-01-18T18:15:22Z"
 		}
 	],
 	"rootPath": "github.com/pdbogen/vator"
