@@ -13,8 +13,8 @@ var log = Log
 func main() {
 	flag.Parse()
 
-	if flag.NArg() != 1 {
-		log.Fatalf("usage: %s <password>", os.Args[0])
+	if flag.NArg() != 2 {
+		log.Fatalf("usage: %s <username> <password>", os.Args[0])
 	}
 
 	db, err := bolt.Open("vator.db", 0600, nil)
@@ -22,12 +22,12 @@ func main() {
 		Log.Fatalf("opening bolt db file vator.db: %s", err)
 	}
 	defer db.Close()
-	user, err := models.LoadUser(db, "pdbogen")
+	user, err := models.LoadUser(db, flag.Arg(0))
 	if err != nil {
-		log.Fatalf("loading pdbogen: %s", err)
+		log.Fatalf("loading %q: %s", flag.Arg(0), err)
 	}
 
-	user.SetPassword(flag.Arg(0))
+	user.SetPassword(flag.Arg(1))
 
 	if err := user.Save(db); err != nil {
 		log.Fatalf("saving user: %s", err)
