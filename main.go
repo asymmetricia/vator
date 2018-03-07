@@ -7,7 +7,9 @@ import (
 	"github.com/pdbogen/nokiahealth"
 	. "github.com/pdbogen/vator/log"
 
+	"crypto/tls"
 	"github.com/pdbogen/vator/models"
+	"golang.org/x/crypto/acme/autocert"
 	"log"
 	"net/http"
 	"time"
@@ -122,6 +124,11 @@ func main() {
 		}
 	}()
 
+	certmgr := autocert.Manager{
+		Prompt:     autocert.AcceptTOS,
+		HostPolicy: autocert.HostWhitelist(*callbackDomain),
+	}
+
 	sessionizer := http.NewServeMux()
 	sessionizer.HandleFunc("/", models.WithSession(db, http.DefaultServeMux.ServeHTTP))
 
@@ -133,5 +140,19 @@ func main() {
 	http.HandleFunc("/measures", RequireAuth(db, RequireLink(db, MeasuresHandler(db, client))))
 	http.HandleFunc("/phone", RequireAuth(db, PhoneHandler(db)))
 	Log.Infof("Listening on port %d", *port)
-	Log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), sessionizer))
+
+	server := &http.Server{
+		Addr:      fmt.Sprintf(":%d", *port),
+		Handler:   sessionizer,
+		TLSConfig: &tls.Config{GetCertificate: certmgr.GetCertificate},
+	}
+
+	challengeServer := &http.Server{
+		Addr:    ":80",
+		Handler: certmgr.HTTPHandler(http.RedirectHandler(fmt.Sprintf("https://%s", *callbackDomain), http.StatusMovedPermanently)),
+	}
+
+	go func() { Log.Fatal(challengeServer.ListenAndServe()) }()
+
+	Log.Fatal(server.ListenAndServeTLS("", ""))
 }
