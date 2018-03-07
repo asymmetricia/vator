@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"github.com/coreos/bbolt"
 	"github.com/pdbogen/nokiahealth"
+	. "github.com/pdbogen/vator/log"
+	"github.com/pdbogen/vator/models"
 	"net/http"
 	"strconv"
-	"github.com/pdbogen/vator/models"
-	. "github.com/pdbogen/vator/log"
 )
 
 func OauthHandler(db *bolt.DB, nokia nokiahealth.Client, consumerSecret string) func(http.ResponseWriter, *http.Request) {
