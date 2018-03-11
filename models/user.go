@@ -114,7 +114,7 @@ func GetUsers(db *bolt.DB) []User {
 				return nil
 			}
 			if u.Id == 0 {
-				Log.Debug("skipping unlinked user %q", string(k))
+				Log.Debugf("skipping unlinked user %q", string(k))
 				return nil
 			}
 			users = append(users, u)
