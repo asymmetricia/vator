@@ -89,6 +89,14 @@ func main() {
 
 	flag.Parse()
 
+	if *port == 0 {
+		if *tlsEnabled {
+			*port = 443
+		} else {
+			*port = 80
+		}
+	}
+
 	if *consumerKey == "" {
 		Log.Fatal("consumer key must be provided")
 	}
@@ -144,10 +152,6 @@ func main() {
 	Log.Infof("Listening on port %d", *port)
 
 	if *tlsEnabled {
-		if *port == 0 {
-			*port = 443
-		}
-
 		server := &http.Server{
 			Addr:      fmt.Sprintf(":%d", *port),
 			Handler:   sessionizer,
@@ -163,10 +167,6 @@ func main() {
 
 		Log.Fatal(server.ListenAndServeTLS("", ""))
 	} else {
-		if *port == 0 {
-			*port = 80
-		}
-
 		server := &http.Server{
 			Addr:    fmt.Sprintf(":%d", *port),
 			Handler: sessionizer,
