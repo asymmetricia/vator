@@ -73,24 +73,6 @@ func IndexHandler(db *bolt.DB, nokia nokiahealth.Client) func(http.ResponseWrite
 	}
 }
 
-func ReauthHandler(db *bolt.DB, nokia nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
-	return func(rw http.ResponseWriter, req *http.Request) {
-		user, err := models.LoadUserRequest(db, req)
-		if err != nil {
-			Bail(rw, req, fmt.Errorf("should be logged in, but: %s", err), http.StatusInternalServerError)
-			return
-		}
-		user.Id = 0
-
-		if err := user.Save(db); err != nil {
-			Bail(rw, req, fmt.Errorf("saving user: %s", err), http.StatusInternalServerError)
-			return
-		}
-
-		http.Redirect(rw, req, "/", http.StatusFound)
-	}
-}
-
 func main() {
 	consumerKey := flag.String("consumer-key", "", "oauth consumer key")
 	consumerSecret := flag.String("consumer-secret", "", "oauth consumer secret")
