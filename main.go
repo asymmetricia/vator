@@ -76,7 +76,7 @@ func IndexHandler(db *bolt.DB, nokia nokiahealth.Client) func(http.ResponseWrite
 func main() {
 	consumerKey := flag.String("consumer-key", "", "oauth consumer key")
 	consumerSecret := flag.String("consumer-secret", "", "oauth consumer secret")
-	port := flag.Int("port", 8080, "port to listen on")
+	port := flag.Int("port", 0, "port to listen on (if 0, actual port will depend on whether TLS is enabled or not)")
 	callbackDomain := flag.String("callback-domain", "localhost", "fqdn for oauth callbacks")
 	callbackPort := flag.Int("callback-port", 0, "callback port; if zero, same as --port")
 	callbackProto := flag.String("callback-proto", "http", "protocol to use in requesting callbacks")
@@ -84,6 +84,8 @@ func main() {
 
 	twilioSid := flag.String("twilio-sid", "", "twilio account SID")
 	twilioToken := flag.String("twilio-token", "", "twilio auth token")
+
+	tlsEnabled := flag.Bool("tls", false, "if true, will configure TLS using a certificate from letsencrypt")
 
 	flag.Parse()
 
@@ -141,18 +143,35 @@ func main() {
 	http.HandleFunc("/phone", RequireAuth(db, PhoneHandler(db)))
 	Log.Infof("Listening on port %d", *port)
 
-	server := &http.Server{
-		Addr:      fmt.Sprintf(":%d", *port),
-		Handler:   sessionizer,
-		TLSConfig: &tls.Config{GetCertificate: certmgr.GetCertificate},
+	if *tlsEnabled {
+		if *port == 0 {
+			*port = 443
+		}
+
+		server := &http.Server{
+			Addr:      fmt.Sprintf(":%d", *port),
+			Handler:   sessionizer,
+			TLSConfig: &tls.Config{GetCertificate: certmgr.GetCertificate},
+		}
+
+		challengeServer := &http.Server{
+			Addr:    ":80",
+			Handler: certmgr.HTTPHandler(http.RedirectHandler(fmt.Sprintf("https://%s", *callbackDomain), http.StatusMovedPermanently)),
+		}
+
+		go func() { Log.Fatal(challengeServer.ListenAndServe()) }()
+
+		Log.Fatal(server.ListenAndServeTLS("", ""))
+	} else {
+		if *port == 0 {
+			*port = 80
+		}
+
+		server := &http.Server{
+			Addr:    fmt.Sprintf(":%d", *port),
+			Handler: sessionizer,
+		}
+
+		Log.Fatal(server.ListenAndServe())
 	}
-
-	challengeServer := &http.Server{
-		Addr:    ":80",
-		Handler: certmgr.HTTPHandler(http.RedirectHandler(fmt.Sprintf("https://%s", *callbackDomain), http.StatusMovedPermanently)),
-	}
-
-	go func() { Log.Fatal(challengeServer.ListenAndServe()) }()
-
-	Log.Fatal(server.ListenAndServeTLS("", ""))
 }
