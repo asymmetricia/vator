@@ -59,12 +59,21 @@ var KeyDoesNotExist = errors.New("key does not exist")
 // SessionGet retrieves the named key from the request's session. If the key does not exist, a blank string and
 // err will be KeyDoesNotExist is returned. If some other error occurs, the returned error will be non-nil.
 func SessionGet(db *bolt.DB, req *http.Request, key string) (value string, err error) {
+	v, e := SessionGetMulti(db, req, []string{key})
+	return v[0], e
+}
+
+// SessionGetMulti retrieves the named keys from the request's session. The returned slice will contain one entry for
+// each requested key, but keys that do not exist will be blank. If any keys do not exist or another error occurs,
+// values will still be populated with a number of entries equal to len(keys), but err will be non-nil.
+func SessionGetMulti(db *bolt.DB, req *http.Request, keys []string) (values []string, err error) {
+	values = make([]string, len(keys))
 	var sid string
 	if strsid, ok := req.Context().Value("session").(string); ok {
 		sid = strsid
 	}
 	if sid == "" {
-		return "", errors.New("no session ID")
+		return values, errors.New("no session ID")
 	}
 	err = db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("sessions"))
@@ -79,17 +88,17 @@ func SessionGet(db *bolt.DB, req *http.Request, key string) (value string, err e
 		if err := json.Unmarshal(sessionData, &sess); err != nil {
 			return fmt.Errorf("corrupt session %q (%q): %s", sid, string(sessionData), err)
 		}
-		var ok bool
-		value, ok = sess[key]
-		if !ok {
-			return KeyDoesNotExist
+		var err error
+		for i, k := range keys {
+			value, ok := sess[k]
+			if !ok {
+				err = KeyDoesNotExist
+			}
+			values[i] = value
 		}
-		return nil
+		return err
 	})
-	if err != nil {
-		return "", err
-	}
-	return
+	return values, err
 }
 
 func SessionDelete(db *bolt.DB, req *http.Request) error {
@@ -111,6 +120,14 @@ func SessionDelete(db *bolt.DB, req *http.Request) error {
 }
 
 func SessionSet(db *bolt.DB, req *http.Request, key string, value string) error {
+	return SessionSetMulti(db, req, []string{key}, []string{value})
+}
+
+func SessionSetMulti(db *bolt.DB, req *http.Request, keys []string, values []string) error {
+	if len(keys) != len(values) {
+		return fmt.Errorf("length mismatch: len(keys) %d != len(values) %d", len(keys), len(values))
+	}
+
 	var sid string
 	if strsid, ok := req.Context().Value("session").(string); ok {
 		sid = strsid
@@ -131,7 +148,9 @@ func SessionSet(db *bolt.DB, req *http.Request, key string, value string) error 
 		if err := json.Unmarshal(sessionData, &sess); err != nil {
 			Log.Warningf("corrupt session %q (%q): %s", sid, string(sessionData), err)
 		}
-		sess[key] = value
+		for i, k := range keys {
+			sess[k] = values[i]
+		}
 		newSessionData, err := json.Marshal(sess)
 		if err != nil {
 			return fmt.Errorf("rendering JSON: %s", err)
@@ -139,7 +158,11 @@ func SessionSet(db *bolt.DB, req *http.Request, key string, value string) error 
 		if err := b.Put([]byte(sid), newSessionData); err != nil {
 			return fmt.Errorf("saving session: %s", err)
 		}
+		log.Debugf("saved session %q -> %q", sid, string(sessionData))
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 	return err
 }
