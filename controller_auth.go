@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cbroglie/mustache"
-	"github.com/coreos/bbolt"
+	bolt "github.com/coreos/bbolt"
 	. "github.com/pdbogen/vator/log"
 	"github.com/pdbogen/vator/models"
 	"golang.org/x/crypto/bcrypt"

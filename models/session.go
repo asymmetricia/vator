@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/coreos/bbolt"
+	bolt "github.com/coreos/bbolt"
 	. "github.com/pdbogen/vator/log"
 	"net/http"
 	"strconv"

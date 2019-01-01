@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/coreos/bbolt"
+	bolt "github.com/coreos/bbolt"
 	"github.com/jrmycanady/nokiahealth"
 	"github.com/pdbogen/vator/models"
 	"net/http"

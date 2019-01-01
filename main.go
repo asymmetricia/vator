@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/coreos/bbolt"
+	bolt "github.com/coreos/bbolt"
 	"github.com/jrmycanady/nokiahealth"
 	. "github.com/pdbogen/vator/log"
 
