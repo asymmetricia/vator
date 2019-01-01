@@ -14,6 +14,60 @@ import (
 	"time"
 )
 
+// WithNewSession returns an http handler function that wraps an underlying
+// handler and amends the request context to include a `session` key
+// containing the session ID as a string. A new session is always created,
+// copying from an existing session, if any. The old session is deleted.
+func WithNewSession(db *bolt.DB, handler func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		id := make([]byte, 32)
+		if _, err := rand.Read(id); err != nil {
+			http.Error(rw, "could not generate session ID", http.StatusInternalServerError)
+			Log.Errorf("could not get bytes to generate a session ID: %s", err)
+			return
+		}
+		hexid := hex.EncodeToString(id)
+		req = req.WithContext(context.WithValue(req.Context(), "session", hexid))
+		rw.Header().Add("set-cookie", fmt.Sprintf("session=%s; HttpOnly", hexid))
+
+		sid, err := req.Cookie("session")
+		if err == nil && sid.Value != "" && SessionExists(db, sid.Value) {
+			SessionCopy(db, sid.Value, hexid)
+			SessionDelete(db, sid.Value)
+		}
+
+		SessionSet(db, req, "created", strconv.FormatInt(time.Now().Unix(), 10))
+
+		handler(rw, req)
+	}
+}
+
+func SessionCopy(db *bolt.DB, old, new string) error {
+	err := db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists([]byte("sessions"))
+		if err != nil {
+			return fmt.Errorf("creating sessions bucket: %s", err)
+		}
+		sessionData := b.Get([]byte(old))
+		sess := map[string]string{}
+		if sessionData != nil {
+			if err := json.Unmarshal(sessionData, &sess); err != nil {
+				Log.Warningf("corrupt session %q (%q): %s", old, string(sessionData), err)
+			}
+		}
+
+		newSessionData, err := json.Marshal(sess)
+		if err != nil {
+			return fmt.Errorf("rendering JSON: %s", err)
+		}
+		if err := b.Put([]byte(new), newSessionData); err != nil {
+			return fmt.Errorf("saving session: %s", err)
+		}
+		return nil
+	})
+	return err
+}
+
 // WithSession returns an http handler function that wraps an underlying handler and amends the request context to
 // include a `session` key containing the session ID as a string. A new session is created if the request session is
 // missing or invalid.
@@ -101,7 +155,7 @@ func SessionGetMulti(db *bolt.DB, req *http.Request, keys []string) (values []st
 	return values, err
 }
 
-func SessionDelete(db *bolt.DB, req *http.Request) error {
+func SessionDeleteReq(db *bolt.DB, req *http.Request) error {
 	var sid string
 	if strsid, ok := req.Context().Value("session").(string); ok {
 		sid = strsid
@@ -109,6 +163,10 @@ func SessionDelete(db *bolt.DB, req *http.Request) error {
 	if sid == "" {
 		return errors.New("no session ID")
 	}
+	return SessionDelete(db, sid)
+}
+
+func SessionDelete(db *bolt.DB, sid string) error {
 	err := db.Update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte("sessions"))
 		if err != nil {
@@ -161,8 +219,5 @@ func SessionSetMulti(db *bolt.DB, req *http.Request, keys []string, values []str
 		log.Debugf("saved session %q -> %q", sid, string(sessionData))
 		return nil
 	})
-	if err != nil {
-		return err
-	}
 	return err
 }

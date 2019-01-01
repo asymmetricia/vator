@@ -1,125 +1,138 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/coreos/bbolt"
-	"github.com/pdbogen/nokiahealth"
-	. "github.com/pdbogen/vator/log"
+	"github.com/jrmycanady/nokiahealth"
 	"github.com/pdbogen/vator/models"
 	"net/http"
-	"strconv"
 	"time"
 )
 
-func OauthHandler(db *bolt.DB, nokia nokiahealth.Client, consumerSecret string) func(http.ResponseWriter, *http.Request) {
-	return RequireForm([]string{"oauth_token", "oauth_verifier", "userid"}, func(rw http.ResponseWriter, req *http.Request) {
+const StatesBucket = "states"
+
+func OauthHandler(db *bolt.DB, nokia nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
+	return RequireForm([]string{"code", "state"}, func(rw http.ResponseWriter, req *http.Request) {
 		user, err := models.LoadUserRequest(db, req)
 		if err != nil {
-			Bail(rw, req, fmt.Errorf("user should be logged in, but: %s", err), http.StatusInternalServerError)
+			Bail(rw, req, fmt.Errorf("loading user from db for request: %s", err), http.StatusInternalServerError)
 			return
 		}
 
-		requestToken, err := models.SessionGet(db, req, "request_token")
+		err = db.Update(func(tx *bolt.Tx) error {
+			states := tx.Bucket([]byte(StatesBucket))
+			if states == nil {
+				return errors.New("state bucket not found")
+			}
+
+			state := states.Get([]byte(req.Form.Get("state")))
+			if state == nil {
+				return errors.New("state entry not found")
+			}
+
+			var expiry time.Time
+			if err := expiry.UnmarshalText(state); err != nil {
+				return fmt.Errorf("state expiry %q not valid", string(state))
+			}
+
+			if expiry.Before(time.Now()) {
+				return fmt.Errorf("state expired at %s", expiry.Format(time.RFC1123Z))
+			}
+
+			return nil
+		})
 		if err != nil {
-			Bail(rw, req, fmt.Errorf("retrieving request_token: %s", err), http.StatusInternalServerError)
-			return
-		}
-		requestSecret, err := models.SessionGet(db, req, "request_secret")
-		if err != nil {
-			Bail(rw, req, fmt.Errorf("retrieving request_secret: %s", err), http.StatusInternalServerError)
+			Bail(rw, req, fmt.Errorf("state %q: %s", req.Form.Get("state"), err), http.StatusBadRequest)
 			return
 		}
 
-		if requestToken == "" || requestSecret == "" {
-			http.Redirect(rw, req, "/", http.StatusFound)
+		nokiaUser, err := nokia.NewUserFromAuthCode(context.Background(), req.Form.Get("code"))
+		if err != nil {
+			Bail(rw, req, fmt.Errorf("geting user from auth code %q: %s", req.Form.Get("code"), err), http.StatusBadRequest)
 			return
 		}
 
-		userid, err := strconv.Atoi(req.Form.Get("userid"))
-		verifier := req.Form.Get("oauth_verifier")
+		token, err := nokiaUser.Token.Token()
 		if err != nil {
-			http.Error(rw, "I had trouble parsing that userid.", http.StatusBadRequest)
-			Log.Errorf("failed to parse userid %q: %s", req.Form.Get("userid"), err)
-			return
-		}
-		ar := nokia.RebuildAccessRequest(requestToken, requestSecret)
-		oauthUser, err := ar.GenerateUser(verifier, userid)
-		Log.Errorf("got callback (token=%q, verifier=%q, userid=%q)",
-			req.Form.Get("oauth_token"),
-			req.Form.Get("oauth_verifier"),
-			req.Form.Get("userid"),
-		)
-		if err != nil {
-			Bail(rw, req, fmt.Errorf("obtaining user with oauth verifier: %s", err), http.StatusInternalServerError)
+			Bail(rw, req, fmt.Errorf("getting token from withings user: %s", err), http.StatusBadRequest)
 			return
 		}
 
-		user.Id = oauthUser.UserID
-		user.Secret = oauthUser.AccessSecretStr
-		user.Token = oauthUser.AccessTokenStr
+		user.AccessToken = token.AccessToken
+		user.RefreshSecret = token.RefreshToken
+		user.TokenExpiry = token.Expiry
 		if err := user.Save(db); err != nil {
 			Bail(rw, req, fmt.Errorf("saving user: %s", err), http.StatusInternalServerError)
 			return
 		}
+
 		http.Redirect(rw, req, "/", http.StatusFound)
 	})
 }
 
-func BeginOauth(db *bolt.DB, nokia nokiahealth.Client, rw http.ResponseWriter, req *http.Request) {
-	var arUrl, expiry string
-	data, err := models.SessionGetMulti(db, req, []string{"oauth_expiry", "authorization_url"})
+func SaveState(db *bolt.DB, state string) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		bucket, err := tx.CreateBucketIfNotExists([]byte(StatesBucket))
+		if err != nil {
+			return fmt.Errorf("getting `%s` bucket: %s", StatesBucket, err)
+		}
 
-	if err == nil {
-		expiry = data[0]
-		arUrl = data[1]
-		var t time.Time
-		expErr := t.UnmarshalText([]byte(expiry))
-		if expErr != nil || time.Now().After(t) {
-			// if the data from the session is expired, pretend there was no data at all
-			err = models.KeyDoesNotExist
-		}
-	}
-	// data is either missing or something bad happened retrieving it
-	if err != nil {
-		if err != models.KeyDoesNotExist {
-			// something bad happened, so bail
-			Bail(rw, req, fmt.Errorf("obtaining data from session: %s", err), http.StatusInternalServerError)
-			return
-		}
-		// data is missing, so create new data and save it
-		ar, err := nokia.CreateAccessRequest()
+		var deletions [][]byte
+		err = bucket.ForEach(func(k, v []byte) error {
+			var expiry time.Time
+			if err := expiry.UnmarshalText(v); err != nil {
+				deletions = append(deletions, k)
+				return nil
+			}
+			if expiry.Before(time.Now()) {
+				deletions = append(deletions, k)
+			}
+			return nil
+		})
 		if err != nil {
-			Bail(rw, req, fmt.Errorf("starting sign-up process: %s", err), http.StatusInternalServerError)
-			return
+			panic(err)
 		}
-		expiryBytes, err := time.Now().Add(time.Hour).MarshalText()
-		if err != nil {
-			Bail(rw, req, fmt.Errorf("rendering time to text: %s", err), http.StatusInternalServerError)
-			return
+		for _, del := range deletions {
+			if err := bucket.Delete(del); err != nil {
+				panic(err)
+			}
 		}
-		expiry = string(expiryBytes)
-		arUrl = ar.AuthorizationURL.String()
-		err = models.SessionSetMulti(db, req,
-			[]string{"oauth_expiry", "authorization_url", "request_token", "request_secret"},
-			[]string{expiry, arUrl, ar.RequestToken, ar.RequestSecret},
-		)
-		if err != nil {
-			Bail(rw, req, fmt.Errorf("saving data to session: %s", err), http.StatusInternalServerError)
-			return
-		}
-	}
 
-	StaticGet(rw, req, fmt.Sprintf("Welcome to vator! Click <a href='%s'>here</a> to link up to your Nokia Health account.", arUrl))
+		expiry, err := time.Now().Add(time.Hour).MarshalText()
+		if err != nil {
+			panic(err)
+		}
+		return bucket.Put([]byte(state), expiry)
+	})
 }
 
-func ReauthHandler(db *bolt.DB, nokia nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
+func BeginOauth(db *bolt.DB, nokia nokiahealth.Client, rw http.ResponseWriter, req *http.Request) {
+	url, state, err := nokia.AuthCodeURL()
+	if err != nil {
+		Bail(rw, req, fmt.Errorf("generating authorization URL: %s", err), http.StatusInternalServerError)
+		return
+	}
+
+	if err := SaveState(db, state); err != nil {
+		Bail(rw, req, fmt.Errorf("saving generated state: %s", err), http.StatusInternalServerError)
+		return
+	}
+
+	StaticGet(rw, req, fmt.Sprintf("Welcome to vator! Click <a href='%s'>here</a> to link up to your Nokia Health account.", url))
+}
+
+func ReauthHandler(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		user, err := models.LoadUserRequest(db, req)
 		if err != nil {
 			Bail(rw, req, fmt.Errorf("should be logged in, but: %s", err), http.StatusInternalServerError)
 			return
 		}
-		user.Id = 0
+		user.RefreshSecret = ""
+		user.AccessToken = ""
+		user.TokenExpiry = time.Time{}
 
 		if err := user.Save(db); err != nil {
 			Bail(rw, req, fmt.Errorf("saving user: %s", err), http.StatusInternalServerError)

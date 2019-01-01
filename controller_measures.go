@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/coreos/bbolt"
-	"github.com/pdbogen/nokiahealth"
+	"github.com/jrmycanady/nokiahealth"
 	. "github.com/pdbogen/vator/log"
 	"github.com/pdbogen/vator/models"
 	"net/http"

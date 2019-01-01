@@ -14,7 +14,9 @@ import (
 )
 
 func Bail(rw http.ResponseWriter, req *http.Request, err error, status int) {
+	Log.ExtraCalldepth++
 	Log.Errorf("%s: %s", req.RemoteAddr, err)
+	Log.ExtraCalldepth--
 	http.Error(rw, "very sorry! afraid something went wrong...", status)
 	return
 }
@@ -181,7 +183,7 @@ func TemplateGet(rw http.ResponseWriter, _ *http.Request, template string, conte
 func LogoutHandler(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		http.SetCookie(rw, &http.Cookie{Name: "session", Expires: time.Unix(0, 0)})
-		if err := models.SessionDelete(db, req); err != nil {
+		if err := models.SessionDeleteReq(db, req); err != nil {
 			Log.Error("error rendering template: %s", err)
 			http.Error(rw, "Very sorry; something went wrong.", http.StatusInternalServerError)
 			return

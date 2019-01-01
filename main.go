@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/coreos/bbolt"
-	"github.com/pdbogen/nokiahealth"
+	"github.com/jrmycanady/nokiahealth"
 	. "github.com/pdbogen/vator/log"
 
 	"crypto/tls"
@@ -43,7 +43,7 @@ func RequireLink(db *bolt.DB, handler func(w http.ResponseWriter, r *http.Reques
 			Bail(rw, req, fmt.Errorf("should be logged in, but: %s", err), http.StatusInternalServerError)
 			return
 		}
-		if user.Id == 0 {
+		if user.RefreshSecret == "" {
 			http.Redirect(rw, req, "/", http.StatusFound)
 			return
 		}
@@ -58,7 +58,7 @@ func IndexHandler(db *bolt.DB, nokia nokiahealth.Client) func(http.ResponseWrite
 			Bail(rw, req, fmt.Errorf("should be logged in, but: %s", err), http.StatusInternalServerError)
 			return
 		}
-		if user.Id == 0 {
+		if user.RefreshSecret == "" {
 			BeginOauth(db, nokia, rw, req)
 		} else {
 			ctx, err := notifications(db, req)
@@ -78,7 +78,7 @@ func main() {
 	consumerSecret := flag.String("consumer-secret", "", "oauth consumer secret")
 	port := flag.Int("port", 0, "port to listen on (if 0, actual port will depend on whether TLS is enabled or not)")
 	callbackDomain := flag.String("callback-domain", "localhost", "fqdn for oauth callbacks")
-	callbackPort := flag.Int("callback-port", 0, "callback port; if zero, same as --port")
+	callbackPort := flag.Int("callback-port", 0, "callback port; if zero, same as -port")
 	callbackProto := flag.String("callback-proto", "http", "protocol to use in requesting callbacks")
 	dbFile := flag.String("db-file", "vator.db", "path to the bolt database file used to persist state")
 
@@ -141,14 +141,14 @@ func main() {
 
 	sessionizer := http.NewServeMux()
 	sessionizer.HandleFunc("/", models.WithSession(db, http.DefaultServeMux.ServeHTTP))
+	sessionizer.HandleFunc("/login", models.WithNewSession(db, RequireNotAuth(db, LoginHandler(db))))
 
 	http.HandleFunc("/", RequireAuth(db, IndexHandler(db, client)))
-	http.HandleFunc("/callback", RequireAuth(db, OauthHandler(db, client, *consumerSecret)))
-	http.HandleFunc("/login", RequireNotAuth(db, LoginHandler(db)))
+	http.HandleFunc("/callback", RequireAuth(db, OauthHandler(db, client)))
 	http.HandleFunc("/signup", RequireNotAuth(db, SignupHandler(db)))
 	http.HandleFunc("/logout", RequireAuth(db, LogoutHandler(db)))
 	http.HandleFunc("/measures", RequireAuth(db, RequireLink(db, MeasuresHandler(db, client))))
-	http.HandleFunc("/reauth", RequireAuth(db, RequireLink(db, ReauthHandler(db, client))))
+	http.HandleFunc("/reauth", RequireAuth(db, RequireLink(db, ReauthHandler(db))))
 	http.HandleFunc("/phone", RequireAuth(db, PhoneHandler(db)))
 	Log.Infof("Listening on port %d", *port)
 

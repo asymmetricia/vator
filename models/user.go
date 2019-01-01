@@ -1,12 +1,13 @@
 package models
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/cbroglie/mustache"
 	"github.com/coreos/bbolt"
-	"github.com/pdbogen/nokiahealth"
+	"github.com/jrmycanady/nokiahealth"
 	. "github.com/pdbogen/vator/log"
 	"golang.org/x/crypto/bcrypt"
 	"math/rand"
@@ -23,12 +24,12 @@ func init() {
 type User struct {
 	Username       string
 	HashedPassword []byte
-	Id             int
-	Token          string
-	Secret         string
 	LastWeight     time.Time
 	Weights        []Weight
 	Phone          string
+	AccessToken    string
+	RefreshSecret  string
+	TokenExpiry    time.Time
 }
 
 type Weight struct {
@@ -39,12 +40,10 @@ type Weight struct {
 var UserNotFound = errors.New("user not found")
 
 func (u *User) NokiaUser(client nokiahealth.Client) (*nokiahealth.User, error) {
-	if u.Id == 0 {
+	if u.RefreshSecret == "" {
 		return nil, errors.New("not linked")
 	}
-	user := new(nokiahealth.User)
-	*user = client.GenerateUser(u.Token, u.Secret, u.Id)
-	return user, nil
+	return client.NewUserFromRefreshToken(context.Background(), u.AccessToken, u.RefreshSecret)
 }
 
 func LoadUserRequest(db *bolt.DB, req *http.Request) (*User, error) {
@@ -113,7 +112,7 @@ func GetUsers(db *bolt.DB) []User {
 				Log.Warning("skipping unparseable user %s: %q", string(k), string(v))
 				return nil
 			}
-			if u.Id == 0 {
+			if u.RefreshSecret == "" {
 				Log.Debugf("skipping unlinked user %q", string(k))
 				return nil
 			}
