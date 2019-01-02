@@ -58,5 +58,8 @@ Phone Number: <form action="/phone" method="POST">
 	<input type="text" name="phone" value="{{phone}}" placeholder="123 456 7890"/>
 	<input type="submit" value="Save"/>
 </form>
+<form id="kgs" action="/kgs" method="POST">
+	Use Kilograms: <input type="checkbox" name="kgs" {{#kgs}}checked{{/kgs}} onchange="document.getElementById('kgs').submit();"/>
+</form>
 Maybe you'd like to <a href='/measures'>view your recent measurements</a>?'
 `

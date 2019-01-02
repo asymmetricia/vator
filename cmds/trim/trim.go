@@ -20,7 +20,7 @@ func main() {
 		log.Fatalf("usage: %s <username>", os.Args[0])
 	}
 
-	db, err := bolt.Open("vator.db", 0600, nil)
+	db, err := bbolt.Open("vator.db", 0600, nil)
 	if err != nil {
 		Log.Fatalf("opening bolt db file vator.db: %s", err)
 	}
@@ -31,8 +31,7 @@ func main() {
 	}
 
 	if len(user.Weights) >= 2 {
-
-		sort.Sort(models.WeightsByDate(user.Weights))
+		sort.Slice(user.Weights, func(i, j int) bool { return user.Weights[i].Date.Before(user.Weights[j].Date) })
 		log.Infof("dropping weight %v", user.Weights[len(user.Weights)-1])
 		user.Weights = user.Weights[0 : len(user.Weights)-1]
 		if !*skiplast {

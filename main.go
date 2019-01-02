@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	bolt "github.com/coreos/bbolt"
+	"github.com/coreos/bbolt"
 	"github.com/jrmycanady/nokiahealth"
 	. "github.com/pdbogen/vator/log"
 
@@ -36,7 +36,7 @@ func RequireForm(required []string, handler func(http.ResponseWriter, *http.Requ
 	}
 }
 
-func RequireLink(db *bolt.DB, handler func(w http.ResponseWriter, r *http.Request)) func(http.ResponseWriter, *http.Request) {
+func RequireLink(db *bbolt.DB, handler func(w http.ResponseWriter, r *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		user, err := models.LoadUserRequest(db, req)
 		if err != nil {
@@ -51,26 +51,11 @@ func RequireLink(db *bolt.DB, handler func(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func IndexHandler(db *bolt.DB, nokia nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
-	return func(rw http.ResponseWriter, req *http.Request) {
-		user, err := models.LoadUserRequest(db, req)
-		if err != nil {
-			Bail(rw, req, fmt.Errorf("should be logged in, but: %s", err), http.StatusInternalServerError)
-			return
-		}
-		if user.RefreshSecret == "" {
-			BeginOauth(db, nokia, rw, req)
-		} else {
-			ctx, err := notifications(db, req)
-			if err != nil {
-				Bail(rw, req, err, http.StatusInternalServerError)
-				return
-			}
-			ctx["phone"] = user.Phone
-
-			TemplateGet(rw, req, indexTemplate, ctx)
-		}
+func callbackUrl(proto string, domain string, port int) string {
+	if proto == "https" && port == 443 || proto == "http" && port == 80 {
+		return proto + "://" + domain + "/callback"
 	}
+	return fmt.Sprintf("%s://%s:%d/callback", proto, domain, port)
 }
 
 func main() {
@@ -119,13 +104,15 @@ func main() {
 		*callbackPort = *port
 	}
 
-	db, err := bolt.Open(*dbFile, 0600, nil)
+	db, err := bbolt.Open(*dbFile, 0600, nil)
 	if err != nil {
 		Log.Fatalf("opening bolt db file %q: %s", *dbFile, err)
 	}
 	defer db.Close()
 
-	client := nokiahealth.NewClient(*consumerKey, *consumerSecret, fmt.Sprintf("%s://%s:%d/callback", *callbackProto, *callbackDomain, *callbackPort))
+	cbUrl := callbackUrl(*callbackProto, *callbackDomain, *callbackPort)
+	Log.Infof("using callback URL %q", cbUrl)
+	client := nokiahealth.NewClient(*consumerKey, *consumerSecret, cbUrl)
 
 	go func() {
 		for {
@@ -150,6 +137,7 @@ func main() {
 	http.HandleFunc("/measures", RequireAuth(db, RequireLink(db, MeasuresHandler(db, client))))
 	http.HandleFunc("/reauth", RequireAuth(db, RequireLink(db, ReauthHandler(db))))
 	http.HandleFunc("/phone", RequireAuth(db, PhoneHandler(db)))
+	http.HandleFunc("/kgs", RequireAuth(db, KgsHandler(db)))
 	Log.Infof("Listening on port %d", *port)
 
 	if *tlsEnabled {

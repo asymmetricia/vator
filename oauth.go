@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	bolt "github.com/coreos/bbolt"
+	"github.com/coreos/bbolt"
 	"github.com/jrmycanady/nokiahealth"
 	"github.com/pdbogen/vator/models"
 	"net/http"
@@ -13,7 +13,7 @@ import (
 
 const StatesBucket = "states"
 
-func OauthHandler(db *bolt.DB, nokia nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
+func OauthHandler(db *bbolt.DB, nokia nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
 	return RequireForm([]string{"code", "state"}, func(rw http.ResponseWriter, req *http.Request) {
 		user, err := models.LoadUserRequest(db, req)
 		if err != nil {
@@ -21,7 +21,7 @@ func OauthHandler(db *bolt.DB, nokia nokiahealth.Client) func(http.ResponseWrite
 			return
 		}
 
-		err = db.Update(func(tx *bolt.Tx) error {
+		err = db.Update(func(tx *bbolt.Tx) error {
 			states := tx.Bucket([]byte(StatesBucket))
 			if states == nil {
 				return errors.New("state bucket not found")
@@ -72,8 +72,8 @@ func OauthHandler(db *bolt.DB, nokia nokiahealth.Client) func(http.ResponseWrite
 	})
 }
 
-func SaveState(db *bolt.DB, state string) error {
-	return db.Update(func(tx *bolt.Tx) error {
+func SaveState(db *bbolt.DB, state string) error {
+	return db.Update(func(tx *bbolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists([]byte(StatesBucket))
 		if err != nil {
 			return fmt.Errorf("getting `%s` bucket: %s", StatesBucket, err)
@@ -108,7 +108,7 @@ func SaveState(db *bolt.DB, state string) error {
 	})
 }
 
-func BeginOauth(db *bolt.DB, nokia nokiahealth.Client, rw http.ResponseWriter, req *http.Request) {
+func BeginOauth(db *bbolt.DB, nokia nokiahealth.Client, rw http.ResponseWriter, req *http.Request) {
 	url, state, err := nokia.AuthCodeURL()
 	if err != nil {
 		Bail(rw, req, fmt.Errorf("generating authorization URL: %s", err), http.StatusInternalServerError)
@@ -123,7 +123,7 @@ func BeginOauth(db *bolt.DB, nokia nokiahealth.Client, rw http.ResponseWriter, r
 	StaticGet(rw, req, fmt.Sprintf("Welcome to vator! Click <a href='%s'>here</a> to link up to your Nokia Health account.", url))
 }
 
-func ReauthHandler(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
+func ReauthHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		user, err := models.LoadUserRequest(db, req)
 		if err != nil {

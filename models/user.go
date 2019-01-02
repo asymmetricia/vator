@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cbroglie/mustache"
-	bolt "github.com/coreos/bbolt"
+	"github.com/coreos/bbolt"
 	"github.com/jrmycanady/nokiahealth"
 	. "github.com/pdbogen/vator/log"
 	"golang.org/x/crypto/bcrypt"
@@ -16,6 +16,8 @@ import (
 	"strconv"
 	"time"
 )
+
+const PoundsFromKg = 2.2046226218
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -30,6 +32,7 @@ type User struct {
 	AccessToken    string
 	RefreshSecret  string
 	TokenExpiry    time.Time
+	Kgs            bool
 }
 
 type Weight struct {
@@ -46,15 +49,15 @@ func (u *User) NokiaUser(client nokiahealth.Client) (*nokiahealth.User, error) {
 	return client.NewUserFromRefreshToken(context.Background(), u.AccessToken, u.RefreshSecret)
 }
 
-func LoadUserRequest(db *bolt.DB, req *http.Request) (*User, error) {
+func LoadUserRequest(db *bbolt.DB, req *http.Request) (*User, error) {
 	if user, ok := req.Context().Value("user").(string); ok {
 		return LoadUser(db, user)
 	}
 	return nil, errors.New("no user in request context")
 }
-func LoadUser(db *bolt.DB, username string) (*User, error) {
+func LoadUser(db *bbolt.DB, username string) (*User, error) {
 	var user *User
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte("users"))
 		if b == nil {
 			return UserNotFound
@@ -76,8 +79,8 @@ func LoadUser(db *bolt.DB, username string) (*User, error) {
 	return user, nil
 }
 
-func (u *User) Save(db *bolt.DB) error {
-	return db.Update(func(tx *bolt.Tx) error {
+func (u *User) Save(db *bbolt.DB) error {
+	return db.Update(func(tx *bbolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte("users"))
 		if err != nil {
 			return fmt.Errorf("opening users bucket: %s", err)
@@ -99,9 +102,9 @@ func (u *User) SetPassword(newPassword string) error {
 	return nil
 }
 
-func GetUsers(db *bolt.DB) []User {
+func GetUsers(db *bbolt.DB) []User {
 	users := []User{}
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte("users"))
 		if b == nil {
 			return nil
@@ -147,20 +150,6 @@ func (u *User) GetWeightsSince(nokia nokiahealth.Client, since time.Time) ([]nok
 	measures := measureResp.ParseData()
 	return measures.Weights, nil
 }
-
-type WeightsByDate []Weight
-
-func (w WeightsByDate) Len() int {
-	return len(w)
-}
-func (w WeightsByDate) Less(a, b int) bool {
-	return w[b].Date.After(w[a].Date)
-}
-func (w WeightsByDate) Swap(a, b int) {
-	w[a], w[b] = w[b], w[a]
-}
-
-var _ sort.Interface = (WeightsByDate)(nil)
 
 // MovingAverageWeight calculates the moving average of the user's weight. `days` specifies the size of the window, and
 // `shift` specifies how many days in the past the window should be moved. An error will be returned if there are not
@@ -239,8 +228,8 @@ func (u User) toastN(days int, twilio *Twilio, encourage bool) error {
 	ctx := map[string]string{
 		"days":      englishDay,
 		"direction": "down",
-		"delta":     strconv.FormatFloat(prev-current, 'f', 2, 64),
-		"final":     strconv.FormatFloat(current, 'f', 1, 64),
+		"delta":     u.FormatKg(prev - current),
+		"final":     u.FormatKg(current),
 	}
 
 	var tmpl string
@@ -252,7 +241,7 @@ func (u User) toastN(days int, twilio *Twilio, encourage bool) error {
 
 		log.Infof("sending %d-day encouragement to %s", days, u.Username)
 		ctx["direction"] = "up"
-		ctx["delta"] = strconv.FormatFloat(current-prev, 'f', 2, 64)
+		ctx["delta"] = u.FormatKg(current - prev)
 		tmpl = encourageToasts[rand.Intn(len(encourageToasts))]
 	} else {
 		log.Infof("sending %d-day toast for %s!", days, u.Username)
@@ -275,7 +264,7 @@ func (u User) Toast(twilio *Twilio) {
 		return
 	}
 
-	sort.Sort(WeightsByDate(u.Weights))
+	sort.Slice(u.Weights, func(i, j int) bool { return u.Weights[i].Date.Before(u.Weights[j].Date) })
 
 	fiveErr := u.toastN(5, twilio, false)
 	if fiveErr == nil {
@@ -292,5 +281,13 @@ func (u User) Toast(twilio *Twilio) {
 		msg := notEnoughData[rand.Intn(len(notEnoughData))]
 		u.sendSms(twilio, msg)
 		return
+	}
+}
+
+func (u User) FormatKg(kgs float64) string {
+	if u.Kgs {
+		return fmt.Sprintf("%0.1fkg", kgs)
+	} else {
+		return fmt.Sprintf("%0.1flb", PoundsFromKg*kgs)
 	}
 }

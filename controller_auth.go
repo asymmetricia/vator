@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cbroglie/mustache"
-	bolt "github.com/coreos/bbolt"
+	"github.com/coreos/bbolt"
 	. "github.com/pdbogen/vator/log"
 	"github.com/pdbogen/vator/models"
 	"golang.org/x/crypto/bcrypt"
@@ -21,7 +21,7 @@ func Bail(rw http.ResponseWriter, req *http.Request, err error, status int) {
 	return
 }
 
-func RequireAuth(db *bolt.DB, handler func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func RequireAuth(db *bbolt.DB, handler func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		user, err := models.SessionGet(db, req, "user")
 		if err != nil {
@@ -33,7 +33,7 @@ func RequireAuth(db *bolt.DB, handler func(http.ResponseWriter, *http.Request)) 
 	}
 }
 
-func RequireNotAuth(db *bolt.DB, handler func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func RequireNotAuth(db *bbolt.DB, handler func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		_, err := models.SessionGet(db, req, "user")
 		if err == nil {
@@ -45,7 +45,7 @@ func RequireNotAuth(db *bolt.DB, handler func(http.ResponseWriter, *http.Request
 	}
 }
 
-func SignupHandler(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
+func SignupHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case "POST":
@@ -56,7 +56,7 @@ func SignupHandler(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func notifications(db *bolt.DB, req *http.Request) (map[string]string, error) {
+func notifications(db *bbolt.DB, req *http.Request) (map[string]string, error) {
 	ctx := map[string]string{}
 	for _, key := range []string{"error", "toast"} {
 		value, err := models.SessionGet(db, req, key)
@@ -75,7 +75,7 @@ func notifications(db *bolt.DB, req *http.Request) (map[string]string, error) {
 	return ctx, nil
 }
 
-func SignupHandlerGet(db *bolt.DB, rw http.ResponseWriter, req *http.Request) {
+func SignupHandlerGet(db *bbolt.DB, rw http.ResponseWriter, req *http.Request) {
 	notif, err := notifications(db, req)
 	if err != nil {
 		Bail(rw, req, err, http.StatusInternalServerError)
@@ -84,7 +84,7 @@ func SignupHandlerGet(db *bolt.DB, rw http.ResponseWriter, req *http.Request) {
 	TemplateGet(rw, req, signupTemplate, notif)
 }
 
-func SignupHandlerPost(db *bolt.DB) func(w http.ResponseWriter, r *http.Request) {
+func SignupHandlerPost(db *bbolt.DB) func(w http.ResponseWriter, r *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		username := req.Form.Get("username")
 		password := req.Form.Get("password")
@@ -127,7 +127,7 @@ func SignupHandlerPost(db *bolt.DB) func(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func LoginHandler(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
+func LoginHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case "POST":
@@ -138,7 +138,7 @@ func LoginHandler(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func LoginHandlerPost(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
+func LoginHandlerPost(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		invalid := func() {
 			http.Error(rw, "The username or password you provided was invalid.", http.StatusBadRequest)
@@ -180,7 +180,7 @@ func TemplateGet(rw http.ResponseWriter, _ *http.Request, template string, conte
 	fmt.Fprintf(rw, out)
 }
 
-func LogoutHandler(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
+func LogoutHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		http.SetCookie(rw, &http.Cookie{Name: "session", Expires: time.Unix(0, 0)})
 		if err := models.SessionDeleteReq(db, req); err != nil {
@@ -192,7 +192,7 @@ func LogoutHandler(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func PhoneHandler(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
+func PhoneHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case "POST":
@@ -203,7 +203,7 @@ func PhoneHandler(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func PhoneHandlerPost(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
+func PhoneHandlerPost(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		user, err := models.LoadUserRequest(db, req)
 		if err != nil {

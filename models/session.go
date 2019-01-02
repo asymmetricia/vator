@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	bolt "github.com/coreos/bbolt"
+	"github.com/coreos/bbolt"
 	. "github.com/pdbogen/vator/log"
 	"net/http"
 	"strconv"
@@ -18,7 +18,7 @@ import (
 // handler and amends the request context to include a `session` key
 // containing the session ID as a string. A new session is always created,
 // copying from an existing session, if any. The old session is deleted.
-func WithNewSession(db *bolt.DB, handler func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func WithNewSession(db *bbolt.DB, handler func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		id := make([]byte, 32)
 		if _, err := rand.Read(id); err != nil {
@@ -42,8 +42,8 @@ func WithNewSession(db *bolt.DB, handler func(http.ResponseWriter, *http.Request
 	}
 }
 
-func SessionCopy(db *bolt.DB, old, new string) error {
-	err := db.Update(func(tx *bolt.Tx) error {
+func SessionCopy(db *bbolt.DB, old, new string) error {
+	err := db.Update(func(tx *bbolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte("sessions"))
 		if err != nil {
 			return fmt.Errorf("creating sessions bucket: %s", err)
@@ -71,7 +71,7 @@ func SessionCopy(db *bolt.DB, old, new string) error {
 // WithSession returns an http handler function that wraps an underlying handler and amends the request context to
 // include a `session` key containing the session ID as a string. A new session is created if the request session is
 // missing or invalid.
-func WithSession(db *bolt.DB, handler func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func WithSession(db *bbolt.DB, handler func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		sid, err := req.Cookie("session")
 		if err == nil && sid.Value != "" && SessionExists(db, sid.Value) {
@@ -93,8 +93,8 @@ func WithSession(db *bolt.DB, handler func(http.ResponseWriter, *http.Request)) 
 	}
 }
 
-func SessionExists(db *bolt.DB, sid string) bool {
-	err := db.View(func(tx *bolt.Tx) error {
+func SessionExists(db *bbolt.DB, sid string) bool {
+	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte("sessions"))
 		if b == nil {
 			return errors.New("no bucket")
@@ -112,7 +112,7 @@ var KeyDoesNotExist = errors.New("key does not exist")
 
 // SessionGet retrieves the named key from the request's session. If the key does not exist, a blank string and
 // err will be KeyDoesNotExist is returned. If some other error occurs, the returned error will be non-nil.
-func SessionGet(db *bolt.DB, req *http.Request, key string) (value string, err error) {
+func SessionGet(db *bbolt.DB, req *http.Request, key string) (value string, err error) {
 	v, e := SessionGetMulti(db, req, []string{key})
 	return v[0], e
 }
@@ -120,7 +120,7 @@ func SessionGet(db *bolt.DB, req *http.Request, key string) (value string, err e
 // SessionGetMulti retrieves the named keys from the request's session. The returned slice will contain one entry for
 // each requested key, but keys that do not exist will be blank. If any keys do not exist or another error occurs,
 // values will still be populated with a number of entries equal to len(keys), but err will be non-nil.
-func SessionGetMulti(db *bolt.DB, req *http.Request, keys []string) (values []string, err error) {
+func SessionGetMulti(db *bbolt.DB, req *http.Request, keys []string) (values []string, err error) {
 	values = make([]string, len(keys))
 	var sid string
 	if strsid, ok := req.Context().Value("session").(string); ok {
@@ -129,7 +129,7 @@ func SessionGetMulti(db *bolt.DB, req *http.Request, keys []string) (values []st
 	if sid == "" {
 		return values, errors.New("no session ID")
 	}
-	err = db.View(func(tx *bolt.Tx) error {
+	err = db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte("sessions"))
 		if b == nil {
 			return errors.New("no bucket")
@@ -155,7 +155,7 @@ func SessionGetMulti(db *bolt.DB, req *http.Request, keys []string) (values []st
 	return values, err
 }
 
-func SessionDeleteReq(db *bolt.DB, req *http.Request) error {
+func SessionDeleteReq(db *bbolt.DB, req *http.Request) error {
 	var sid string
 	if strsid, ok := req.Context().Value("session").(string); ok {
 		sid = strsid
@@ -166,8 +166,8 @@ func SessionDeleteReq(db *bolt.DB, req *http.Request) error {
 	return SessionDelete(db, sid)
 }
 
-func SessionDelete(db *bolt.DB, sid string) error {
-	err := db.Update(func(tx *bolt.Tx) error {
+func SessionDelete(db *bbolt.DB, sid string) error {
+	err := db.Update(func(tx *bbolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte("sessions"))
 		if err != nil {
 			return fmt.Errorf("creating sessions bucket: %s", err)
@@ -177,11 +177,11 @@ func SessionDelete(db *bolt.DB, sid string) error {
 	return err
 }
 
-func SessionSet(db *bolt.DB, req *http.Request, key string, value string) error {
+func SessionSet(db *bbolt.DB, req *http.Request, key string, value string) error {
 	return SessionSetMulti(db, req, []string{key}, []string{value})
 }
 
-func SessionSetMulti(db *bolt.DB, req *http.Request, keys []string, values []string) error {
+func SessionSetMulti(db *bbolt.DB, req *http.Request, keys []string, values []string) error {
 	if len(keys) != len(values) {
 		return fmt.Errorf("length mismatch: len(keys) %d != len(values) %d", len(keys), len(values))
 	}
@@ -193,7 +193,7 @@ func SessionSetMulti(db *bolt.DB, req *http.Request, keys []string, values []str
 	if sid == "" {
 		return errors.New("no session ID")
 	}
-	err := db.Update(func(tx *bolt.Tx) error {
+	err := db.Update(func(tx *bbolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte("sessions"))
 		if err != nil {
 			return fmt.Errorf("creating sessions bucket: %s", err)

@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	bolt "github.com/coreos/bbolt"
+	"github.com/coreos/bbolt"
 	"github.com/jrmycanady/nokiahealth"
 	. "github.com/pdbogen/vator/log"
 	"github.com/pdbogen/vator/models"
@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func MeasuresHandler(db *bolt.DB, nokia nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
+func MeasuresHandler(db *bbolt.DB, nokia nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		u, err := models.LoadUserRequest(db, req)
 		if err != nil {
@@ -27,13 +27,14 @@ func MeasuresHandler(db *bolt.DB, nokia nokiahealth.Client) func(http.ResponseWr
 		if len(weights) > 5 {
 			weights = weights[0:5]
 		}
-		for _, w := range weights {
-			fmt.Fprintln(rw, w.Date, " ", w.Kgs)
+		for i := len(weights)-1; i >= 0; i-- {
+			w := weights[i]
+			fmt.Fprintln(rw, w.Date, " ", u.FormatKg(w.Kgs))
 		}
 	}
 }
 
-func ScanMeasures(db *bolt.DB, nokia nokiahealth.Client, twilio *models.Twilio) {
+func ScanMeasures(db *bbolt.DB, nokia nokiahealth.Client, twilio *models.Twilio) {
 	for _, u := range models.GetUsers(db) {
 		if u.LastWeight.IsZero() {
 			u.LastWeight = time.Now().AddDate(0, 0, -200)

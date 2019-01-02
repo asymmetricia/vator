@@ -19,7 +19,7 @@ func main() {
 		log.Fatalf("usage: %s <username>", os.Args[0])
 	}
 
-	db, err := bolt.Open("vator.db", 0600, nil)
+	db, err := bbolt.Open("vator.db", 0600, nil)
 	if err != nil {
 		Log.Fatalf("opening bolt db file vator.db: %s", err)
 	}
@@ -29,7 +29,7 @@ func main() {
 		log.Fatalf("loading %q: %s", flag.Arg(0), err)
 	}
 
-	sort.Sort(models.WeightsByDate(user.Weights))
+	sort.Slice(user.Weights, func(i, j int) bool { return user.Weights[i].Date.Before(user.Weights[j].Date) })
 
 	for i := 0; i < flag.NArg(); i++ {
 		kg, err := strconv.ParseFloat(flag.Arg(i), 64)
