@@ -7,4 +7,5 @@
   -twilio-sid="$TWILIO_SID" \
   -twilio-token="$TWILIO_TOKEN" \
   -callback-domain="$FQDN" \
+  -callback-proto="${CALLBACK_PROTO:-http}" \
   ${TLS:+--tls}
