@@ -27,7 +27,7 @@ func MeasuresHandler(db *bbolt.DB, nokia nokiahealth.Client) func(http.ResponseW
 		if len(weights) > 5 {
 			weights = weights[0:5]
 		}
-		for i := len(weights)-1; i >= 0; i-- {
+		for i := len(weights) - 1; i >= 0; i-- {
 			w := weights[i]
 			fmt.Fprintln(rw, w.Date, " ", u.FormatKg(w.Kgs))
 		}
