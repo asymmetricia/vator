@@ -8,7 +8,7 @@ restart: .push
 push: .push
 .push: .docker
 	@ set -e; \
-	eval "$$(aws ecr get-login)" && \
+	eval "$$(aws --region=us-west-1 ecr get-login --no-include-email)" && \
 	docker push ${IMAGE_URL} && \
 	touch .push
 
@@ -20,3 +20,6 @@ push: .push
 vator: ${shell find -name \*.go}
 	go fmt github.com/pdbogen/vator/...
 	go build -o vator
+
+tail:
+	ssh core@mapbot.cernu.us journalctl -u vator -f
