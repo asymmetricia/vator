@@ -42,7 +42,7 @@ type Weight struct {
 
 var UserNotFound = errors.New("user not found")
 
-func (u *User) NokiaUser(client nokiahealth.Client) (*nokiahealth.User, error) {
+func (u *User) NokiaUser(client *nokiahealth.Client) (*nokiahealth.User, error) {
 	if u.RefreshSecret == "" {
 		return nil, errors.New("not linked")
 	}
@@ -133,11 +133,11 @@ func GetUsers(db *bbolt.DB) []User {
 	return users
 }
 
-func (u *User) GetWeights(nokia nokiahealth.Client) ([]nokiahealth.Weight, error) {
+func (u *User) GetWeights(nokia *nokiahealth.Client) ([]nokiahealth.Weight, error) {
 	return u.GetWeightsSince(nokia, time.Now().AddDate(0, 0, -200))
 }
 
-func (u *User) GetWeightsSince(nokia nokiahealth.Client, since time.Time) ([]nokiahealth.Weight, error) {
+func (u *User) GetWeightsSince(nokia *nokiahealth.Client, since time.Time) ([]nokiahealth.Weight, error) {
 	nuser, err := u.NokiaUser(nokia)
 	if err != nil {
 		return nil, err

@@ -13,7 +13,7 @@ import (
 
 const StatesBucket = "states"
 
-func OauthHandler(db *bbolt.DB, nokia nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
+func OauthHandler(db *bbolt.DB, nokia *nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
 	return RequireForm([]string{"code", "state"}, func(rw http.ResponseWriter, req *http.Request) {
 		user, err := models.LoadUserRequest(db, req)
 		if err != nil {
@@ -108,7 +108,7 @@ func SaveState(db *bbolt.DB, state string) error {
 	})
 }
 
-func BeginOauth(db *bbolt.DB, nokia nokiahealth.Client, rw http.ResponseWriter, req *http.Request) {
+func BeginOauth(db *bbolt.DB, nokia *nokiahealth.Client, rw http.ResponseWriter, req *http.Request) {
 	url, state, err := nokia.AuthCodeURL()
 	if err != nil {
 		Bail(rw, req, fmt.Errorf("generating authorization URL: %s", err), http.StatusInternalServerError)
