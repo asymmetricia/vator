@@ -33,9 +33,9 @@ func main() {
 		Log.Fatalf("opening bolt db file vator.db: %s", err)
 	}
 	defer db.Close()
-	user, err := models.LoadUser(db, flag.Arg(0))
+	user, err := models.LoadUser(db, *username)
 	if err != nil {
-		log.Fatalf("loading %q: %s", flag.Arg(0), err)
+		log.Fatalf("loading %q: %s", *username, err)
 	}
 
 	if *password != "" {
