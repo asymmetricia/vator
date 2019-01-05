@@ -1,8 +1,8 @@
 package models
 
 var encourageToasts = []string{
-	"your {{days}}-day average is {{direction}} {{delta}}kg to {{final}}kg- small roadbump, but that's ok!",
-	"hi.. {{direction}} a little, I'm afraid. Just {{delta}}kg. Your {{days}}-day average is now {{final}}kg, but one good day can turn that around",
+	"your {{days}}-day average is {{direction}} {{delta}}{{unit}} to {{final}}{{unit}}- small roadbump, but that's ok!",
+	"hi.. {{direction}} a little, I'm afraid. Just {{delta}}{{unit}}. Your {{days}}-day average is now {{final}}{{unit}}, but one good day can turn that around",
 }
 
 var notEnoughData = []string{
@@ -12,6 +12,6 @@ var notEnoughData = []string{
 }
 
 var toasts = []string{
-	"nice! your {{days}} day average is {{direction}} by {{delta}}kg to {{final}}kg",
-	"cool, that brings your {{days}}-day average {{direction}} {{delta}}kg to {{final}}kg",
+	"nice! your {{days}} day average is {{direction}} by {{delta}}{{unit}} to {{final}}{{unit}}",
+	"cool, that brings your {{days}}-day average {{direction}} {{delta}}{{unit}} to {{final}}{{unit}}",
 }

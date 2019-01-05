@@ -259,6 +259,7 @@ func (u User) toastN(days int, twilio *Twilio, encourage bool) error {
 		"direction": "down",
 		"delta":     u.FormatKg(prev - current),
 		"final":     u.FormatKg(current),
+		"unit":      u.Unit(),
 	}
 
 	var tmpl string
@@ -315,8 +316,15 @@ func (u User) Toast(twilio *Twilio) {
 
 func (u User) FormatKg(kgs float64) string {
 	if u.Kgs {
-		return fmt.Sprintf("%0.1fkg", kgs)
+		return fmt.Sprintf("%0.1f", kgs)
 	} else {
-		return fmt.Sprintf("%0.1flb", PoundsFromKg*kgs)
+		return fmt.Sprintf("%0.1f", PoundsFromKg*kgs)
 	}
+}
+
+func (u User) Unit() string {
+	if u.Kgs {
+		return "kg"
+	}
+	return "lb"
 }
