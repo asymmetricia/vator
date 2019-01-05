@@ -19,7 +19,7 @@ func MeasuresHandler(db *bbolt.DB, nokia *nokiahealth.Client) func(http.Response
 
 		}
 
-		weights, err := u.GetWeights(nokia)
+		weights, err := u.GetWeights(db, nokia)
 		if err != nil {
 			Bail(rw, req, err, http.StatusInternalServerError)
 			return
@@ -29,7 +29,10 @@ func MeasuresHandler(db *bbolt.DB, nokia *nokiahealth.Client) func(http.Response
 		}
 		for i := len(weights) - 1; i >= 0; i-- {
 			w := weights[i]
-			fmt.Fprintln(rw, w.Date, " ", u.FormatKg(w.Kgs))
+			if _, err := fmt.Fprintln(rw, w.Date, " ", u.FormatKg(w.Kgs)); err != nil {
+				Log.Errorf("writing output to user: %s", err)
+				return
+			}
 		}
 	}
 }
@@ -39,7 +42,7 @@ func ScanMeasures(db *bbolt.DB, nokia *nokiahealth.Client, twilio *models.Twilio
 		if u.LastWeight.IsZero() {
 			u.LastWeight = time.Now().AddDate(0, 0, -200)
 		}
-		weights, err := u.GetWeightsSince(nokia, u.LastWeight.Add(time.Minute))
+		weights, err := u.GetWeightsSince(db, nokia, u.LastWeight.Add(time.Minute))
 		if err != nil {
 			Log.Warningf("error getting weights for %q: %s", u.Username, err)
 			continue

@@ -60,6 +60,7 @@ func OauthHandler(db *bbolt.DB, nokia *nokiahealth.Client) func(http.ResponseWri
 			return
 		}
 
+		user.OauthTime = time.Now()
 		user.AccessToken = token.AccessToken
 		user.RefreshSecret = token.RefreshToken
 		user.TokenExpiry = token.Expiry

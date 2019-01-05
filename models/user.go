@@ -10,6 +10,7 @@ import (
 	"github.com/jrmycanady/nokiahealth"
 	. "github.com/pdbogen/vator/log"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/oauth2"
 	"math/rand"
 	"net/http"
 	"sort"
@@ -29,6 +30,7 @@ type User struct {
 	LastWeight     time.Time
 	Weights        []Weight
 	Phone          string
+	OauthTime      time.Time
 	AccessToken    string
 	RefreshSecret  string
 	TokenExpiry    time.Time
@@ -42,11 +44,38 @@ type Weight struct {
 
 var UserNotFound = errors.New("user not found")
 
-func (u *User) NokiaUser(client *nokiahealth.Client) (*nokiahealth.User, error) {
+func (u *User) NokiaUser(db *bbolt.DB, client *nokiahealth.Client) (*nokiahealth.User, error) {
 	if u.RefreshSecret == "" {
 		return nil, errors.New("not linked")
 	}
-	return client.NewUserFromRefreshToken(context.Background(), u.AccessToken, u.RefreshSecret)
+	token := &oauth2.Token{
+		Expiry:       u.TokenExpiry,
+		AccessToken:  u.AccessToken,
+		RefreshToken: u.RefreshSecret,
+	}
+
+	if !token.Valid() {
+		var err error
+		token, err = client.OAuth2Config.TokenSource(context.Background(), token).Token()
+		if err != nil {
+			return nil, fmt.Errorf("renewing oauth token: %s", err)
+		}
+
+		u.RefreshSecret = token.RefreshToken
+		u.AccessToken = token.AccessToken
+		u.TokenExpiry = token.Expiry
+		if err := u.Save(db); err != nil {
+			return nil, fmt.Errorf("needed to refresh user's token, "+
+				"but got an error saving the updated token to the DB: %s", err)
+		}
+	}
+
+	return &nokiahealth.User{
+		Token:      client.OAuth2Config.TokenSource(context.Background(), token),
+		Client:     client,
+		HTTPClient: client.OAuth2Config.Client(context.Background(), token),
+	}, nil
+
 }
 
 func LoadUserRequest(db *bbolt.DB, req *http.Request) (*User, error) {
@@ -133,12 +162,12 @@ func GetUsers(db *bbolt.DB) []User {
 	return users
 }
 
-func (u *User) GetWeights(nokia *nokiahealth.Client) ([]nokiahealth.Weight, error) {
-	return u.GetWeightsSince(nokia, time.Now().AddDate(0, 0, -200))
+func (u *User) GetWeights(db *bbolt.DB, nokia *nokiahealth.Client) ([]nokiahealth.Weight, error) {
+	return u.GetWeightsSince(db, nokia, time.Now().AddDate(0, 0, -200))
 }
 
-func (u *User) GetWeightsSince(nokia *nokiahealth.Client, since time.Time) ([]nokiahealth.Weight, error) {
-	nuser, err := u.NokiaUser(nokia)
+func (u *User) GetWeightsSince(db *bbolt.DB, nokia *nokiahealth.Client, since time.Time) ([]nokiahealth.Weight, error) {
+	nuser, err := u.NokiaUser(db, nokia)
 	if err != nil {
 		return nil, err
 	}
