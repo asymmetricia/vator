@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func MeasuresHandler(db *bbolt.DB, nokia nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
+func MeasuresHandler(db *bbolt.DB, withings nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		u, err := models.LoadUserRequest(db, req)
 		if err != nil {
@@ -19,7 +19,7 @@ func MeasuresHandler(db *bbolt.DB, nokia nokiahealth.Client) func(http.ResponseW
 
 		}
 
-		weights, err := u.GetWeights(nokia)
+		weights, err := u.GetWeights(withings)
 		if err != nil {
 			Bail(rw, req, err, http.StatusInternalServerError)
 			return
@@ -34,14 +34,14 @@ func MeasuresHandler(db *bbolt.DB, nokia nokiahealth.Client) func(http.ResponseW
 	}
 }
 
-func ScanMeasures(db *bbolt.DB, nokia nokiahealth.Client, twilio *models.Twilio) {
+func ScanMeasures(db *bbolt.DB, withings nokiahealth.Client, twilio *models.Twilio) {
 	for _, u := range models.GetUsers(db) {
 		if u.LastWeight.IsZero() {
 			u.LastWeight = time.Now().AddDate(0, 0, -200)
 		}
-		weights, err := u.GetWeightsSince(nokia, u.LastWeight.Add(time.Minute))
+		weights, err := u.GetWeightsSince(withings, u.LastWeight.Add(time.Minute))
 		if err != nil {
-			Log.Warning("error getting weights for %q: %s", u.Username, err)
+			Log.Warningf("error getting weights for %q: %s", u.Username, err)
 			continue
 		}
 		if len(weights) == 0 {

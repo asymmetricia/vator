@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-func IndexHandler(db *bbolt.DB, nokia nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
+func IndexHandler(db *bbolt.DB, withings nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		user, err := models.LoadUserRequest(db, req)
 		if err != nil {
@@ -16,7 +16,7 @@ func IndexHandler(db *bbolt.DB, nokia nokiahealth.Client) func(http.ResponseWrit
 			return
 		}
 		if user.RefreshSecret == "" {
-			BeginOauth(db, nokia, rw, req)
+			BeginOauth(db, withings, rw, req)
 		} else {
 			ctx, err := notifications(db, req)
 			if err != nil {

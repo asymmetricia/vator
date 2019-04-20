@@ -133,12 +133,12 @@ func GetUsers(db *bbolt.DB) []User {
 	return users
 }
 
-func (u *User) GetWeights(nokia nokiahealth.Client) ([]nokiahealth.Weight, error) {
-	return u.GetWeightsSince(nokia, time.Now().AddDate(0, 0, -200))
+func (u *User) GetWeights(withings nokiahealth.Client) ([]nokiahealth.Weight, error) {
+	return u.GetWeightsSince(withings, time.Now().AddDate(0, 0, -200))
 }
 
-func (u *User) GetWeightsSince(nokia nokiahealth.Client, since time.Time) ([]nokiahealth.Weight, error) {
-	nuser, err := u.NokiaUser(nokia)
+func (u *User) GetWeightsSince(withings nokiahealth.Client, since time.Time) ([]nokiahealth.Weight, error) {
+	nuser, err := u.NokiaUser(withings)
 	if err != nil {
 		return nil, err
 	}

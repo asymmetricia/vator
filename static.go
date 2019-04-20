@@ -10,7 +10,7 @@ const preambleHtml = `<html>
 
 const signupTemplate = `
 {{>preamble}}
-Want to sign up? Great! First, you'll need a vator acount. After that, you'll need to connect to your Nokia account. To
+Want to sign up? Great! First, you'll need a vator acount. After that, you'll need to connect to your Withings account. To
 get started, pick a username and create a password.<br/>
 {{>error}}
 {{>toast}}
@@ -52,7 +52,7 @@ var partials = &mustache.StaticProvider{map[string]string{
 const indexTemplate = `
 {{>error}}
 {{>toast}}
-You're all set up! If something seems broken, click <a href='/reauth'>here</a> to re-authenticate to Nokia Health.<br/>
+You're all set up! If something seems broken, click <a href='/reauth'>here</a> to re-authenticate to Withings.<br/>
 &nbsp;<br/>
 Phone Number: <form action="/phone" method="POST">
 	<input type="text" name="phone" value="{{phone}}" placeholder="123 456 7890"/>

@@ -13,7 +13,7 @@ import (
 
 const StatesBucket = "states"
 
-func OauthHandler(db *bbolt.DB, nokia nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
+func OauthHandler(db *bbolt.DB, withings nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
 	return RequireForm([]string{"code", "state"}, func(rw http.ResponseWriter, req *http.Request) {
 		user, err := models.LoadUserRequest(db, req)
 		if err != nil {
@@ -48,13 +48,13 @@ func OauthHandler(db *bbolt.DB, nokia nokiahealth.Client) func(http.ResponseWrit
 			return
 		}
 
-		nokiaUser, err := nokia.NewUserFromAuthCode(context.Background(), req.Form.Get("code"))
+		withingsUser, err := withings.NewUserFromAuthCode(context.Background(), req.Form.Get("code"))
 		if err != nil {
 			Bail(rw, req, fmt.Errorf("geting user from auth code %q: %s", req.Form.Get("code"), err), http.StatusBadRequest)
 			return
 		}
 
-		token, err := nokiaUser.Token.Token()
+		token, err := withingsUser.Token()
 		if err != nil {
 			Bail(rw, req, fmt.Errorf("getting token from withings user: %s", err), http.StatusBadRequest)
 			return
@@ -108,8 +108,8 @@ func SaveState(db *bbolt.DB, state string) error {
 	})
 }
 
-func BeginOauth(db *bbolt.DB, nokia nokiahealth.Client, rw http.ResponseWriter, req *http.Request) {
-	url, state, err := nokia.AuthCodeURL()
+func BeginOauth(db *bbolt.DB, withings nokiahealth.Client, rw http.ResponseWriter, req *http.Request) {
+	url, state, err := withings.AuthCodeURL()
 	if err != nil {
 		Bail(rw, req, fmt.Errorf("generating authorization URL: %s", err), http.StatusInternalServerError)
 		return
@@ -120,7 +120,7 @@ func BeginOauth(db *bbolt.DB, nokia nokiahealth.Client, rw http.ResponseWriter, 
 		return
 	}
 
-	StaticGet(rw, req, fmt.Sprintf("Welcome to vator! Click <a href='%s'>here</a> to link up to your Nokia Health account.", url))
+	StaticGet(rw, req, fmt.Sprintf("Welcome to vator! Click <a href='%s'>here</a> to link up to your Withings account.", url))
 }
 
 func ReauthHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
