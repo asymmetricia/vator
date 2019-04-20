@@ -1,4 +1,4 @@
-.PHONY: clean
+.PHONY: clean tail
 
 IMAGE_URL ?= 248174752766.dkr.ecr.us-west-1.amazonaws.com/vator
 
@@ -20,3 +20,6 @@ push: .push
 vator: ${shell find -name \*.go}
 	go fmt github.com/pdbogen/vator/...
 	go build -o vator
+
+tail:
+	ssh core@mapbot.cernu.us journalctl -u vator -f
