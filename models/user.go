@@ -277,11 +277,13 @@ func (u User) Toast(twilio *Twilio) {
 	}
 
 	if fiveErr == InsufficientData && thirtyErr == InsufficientData {
+		log.Debugf("encouraging %q to provide more data", u.Username)
 		// send not enough data message
 		msg := notEnoughData[rand.Intn(len(notEnoughData))]
 		u.sendSms(twilio, msg)
 		return
 	}
+	log.Debugf("confusing toast results for %q: 5=%q, 30=%q", u.Username, fiveErr, thirtyErr)
 }
 
 func (u User) FormatKg(kgs float64) string {
