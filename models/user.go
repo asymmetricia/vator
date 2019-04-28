@@ -42,11 +42,25 @@ type Weight struct {
 
 var UserNotFound = errors.New("user not found")
 
-func (u *User) NokiaUser(client nokiahealth.Client) (*nokiahealth.User, error) {
+func (u *User) NokiaUser(db *bbolt.DB, client nokiahealth.Client) (*nokiahealth.User, error) {
 	if u.RefreshSecret == "" {
 		return nil, errors.New("not linked")
 	}
-	return client.NewUserFromRefreshToken(context.Background(), u.AccessToken, u.RefreshSecret)
+
+	nuser, err := client.NewUserFromRefreshToken(context.Background(), u.AccessToken, u.RefreshSecret)
+
+	if err != nil {
+		return nil, fmt.Errorf("getting user: %s", err)
+	}
+
+	if nuser.RefreshTokenReplaced() {
+		u.RefreshSecret = nuser.CurrentRefreshToken
+		if err := u.Save(db); err != nil {
+			return nil, fmt.Errorf("saving updated user to DB: %s", err)
+		}
+	}
+
+	return nuser, nil
 }
 
 func LoadUserRequest(db *bbolt.DB, req *http.Request) (*User, error) {
@@ -133,12 +147,12 @@ func GetUsers(db *bbolt.DB) []User {
 	return users
 }
 
-func (u *User) GetWeights(withings nokiahealth.Client) ([]nokiahealth.Weight, error) {
-	return u.GetWeightsSince(withings, time.Now().AddDate(0, 0, -200))
+func (u *User) GetWeights(db *bbolt.DB, withings nokiahealth.Client) ([]nokiahealth.Weight, error) {
+	return u.GetWeightsSince(db, withings, time.Now().AddDate(0, 0, -200))
 }
 
-func (u *User) GetWeightsSince(withings nokiahealth.Client, since time.Time) ([]nokiahealth.Weight, error) {
-	nuser, err := u.NokiaUser(withings)
+func (u *User) GetWeightsSince(db *bbolt.DB, withings nokiahealth.Client, since time.Time) ([]nokiahealth.Weight, error) {
+	nuser, err := u.NokiaUser(db, withings)
 	if err != nil {
 		return nil, err
 	}
@@ -148,6 +162,7 @@ func (u *User) GetWeightsSince(withings nokiahealth.Client, since time.Time) ([]
 		return nil, err
 	}
 	measures := measureResp.ParseData()
+
 	return measures.Weights, nil
 }
 

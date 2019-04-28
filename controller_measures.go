@@ -19,7 +19,7 @@ func MeasuresHandler(db *bbolt.DB, withings nokiahealth.Client) func(http.Respon
 
 		}
 
-		weights, err := u.GetWeights(withings)
+		weights, err := u.GetWeights(db, withings)
 		if err != nil {
 			Bail(rw, req, err, http.StatusInternalServerError)
 			return
@@ -39,7 +39,7 @@ func ScanMeasures(db *bbolt.DB, withings nokiahealth.Client, twilio *models.Twil
 		if u.LastWeight.IsZero() {
 			u.LastWeight = time.Now().AddDate(0, 0, -200)
 		}
-		weights, err := u.GetWeightsSince(withings, u.LastWeight.Add(time.Minute))
+		weights, err := u.GetWeightsSince(db, withings, u.LastWeight.Add(time.Minute))
 		if err != nil {
 			Log.Warningf("error getting weights for %q: %s", u.Username, err)
 			continue
