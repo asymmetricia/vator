@@ -44,38 +44,25 @@ type Weight struct {
 
 var UserNotFound = errors.New("user not found")
 
-func (u *User) NokiaUser(db *bbolt.DB, client *nokiahealth.Client) (*nokiahealth.User, error) {
+func (u *User) NokiaUser(db *bbolt.DB, client nokiahealth.Client) (*nokiahealth.User, error) {
 	if u.RefreshSecret == "" {
 		return nil, errors.New("not linked")
 	}
-	token := &oauth2.Token{
-		Expiry:       u.TokenExpiry,
-		AccessToken:  u.AccessToken,
-		RefreshToken: u.RefreshSecret,
+
+	nuser, err := client.NewUserFromRefreshToken(context.Background(), u.AccessToken, u.RefreshSecret)
+
+	if err != nil {
+		return nil, fmt.Errorf("getting user: %s", err)
 	}
 
-	if !token.Valid() {
-		var err error
-		token, err = client.OAuth2Config.TokenSource(context.Background(), token).Token()
-		if err != nil {
-			return nil, fmt.Errorf("renewing oauth token: %s", err)
-		}
-
-		u.RefreshSecret = token.RefreshToken
-		u.AccessToken = token.AccessToken
-		u.TokenExpiry = token.Expiry
+	if nuser.RefreshTokenReplaced() {
+		u.RefreshSecret = nuser.CurrentRefreshToken
 		if err := u.Save(db); err != nil {
-			return nil, fmt.Errorf("needed to refresh user's token, "+
-				"but got an error saving the updated token to the DB: %s", err)
+			return nil, fmt.Errorf("saving updated user to DB: %s", err)
 		}
 	}
 
-	return &nokiahealth.User{
-		Token:      client.OAuth2Config.TokenSource(context.Background(), token),
-		Client:     client,
-		HTTPClient: client.OAuth2Config.Client(context.Background(), token),
-	}, nil
-
+	return nuser, nil
 }
 
 func LoadUserRequest(db *bbolt.DB, req *http.Request) (*User, error) {
@@ -162,12 +149,12 @@ func GetUsers(db *bbolt.DB) []User {
 	return users
 }
 
-func (u *User) GetWeights(db *bbolt.DB, nokia *nokiahealth.Client) ([]nokiahealth.Weight, error) {
-	return u.GetWeightsSince(db, nokia, time.Now().AddDate(0, 0, -200))
+func (u *User) GetWeights(db *bbolt.DB, withings nokiahealth.Client) ([]nokiahealth.Weight, error) {
+	return u.GetWeightsSince(db, withings, time.Now().AddDate(0, 0, -200))
 }
 
-func (u *User) GetWeightsSince(db *bbolt.DB, nokia *nokiahealth.Client, since time.Time) ([]nokiahealth.Weight, error) {
-	nuser, err := u.NokiaUser(db, nokia)
+func (u *User) GetWeightsSince(db *bbolt.DB, withings nokiahealth.Client, since time.Time) ([]nokiahealth.Weight, error) {
+	nuser, err := u.NokiaUser(db, withings)
 	if err != nil {
 		return nil, err
 	}
@@ -177,6 +164,7 @@ func (u *User) GetWeightsSince(db *bbolt.DB, nokia *nokiahealth.Client, since ti
 		return nil, err
 	}
 	measures := measureResp.ParseData()
+
 	return measures.Weights, nil
 }
 
@@ -307,11 +295,13 @@ func (u User) Toast(twilio *Twilio) {
 	}
 
 	if fiveErr == InsufficientData && thirtyErr == InsufficientData {
+		log.Debugf("encouraging %q to provide more data", u.Username)
 		// send not enough data message
 		msg := notEnoughData[rand.Intn(len(notEnoughData))]
 		u.sendSms(twilio, msg)
 		return
 	}
+	log.Debugf("confusing toast results for %q: 5=%q, 30=%q", u.Username, fiveErr, thirtyErr)
 }
 
 func (u User) FormatKg(kgs float64) string {

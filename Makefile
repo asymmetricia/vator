@@ -1,4 +1,4 @@
-.PHONY: clean
+.PHONY: clean tail
 
 IMAGE_URL ?= 248174752766.dkr.ecr.us-west-1.amazonaws.com/vator
 
