@@ -63,7 +63,6 @@ func OauthHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.Response
 		user.OauthTime = time.Now()
 		user.AccessToken = token.AccessToken
 		user.RefreshSecret = token.RefreshToken
-		user.TokenExpiry = token.Expiry
 		if err := user.Save(db); err != nil {
 			Bail(rw, req, fmt.Errorf("saving user: %s", err), http.StatusInternalServerError)
 			return
@@ -133,7 +132,6 @@ func ReauthHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 		}
 		user.RefreshSecret = ""
 		user.AccessToken = ""
-		user.TokenExpiry = time.Time{}
 
 		if err := user.Save(db); err != nil {
 			Bail(rw, req, fmt.Errorf("saving user: %s", err), http.StatusInternalServerError)
