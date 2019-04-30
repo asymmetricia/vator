@@ -112,11 +112,12 @@ func main() {
 
 	cbUrl := callbackUrl(*callbackProto, *callbackDomain, *callbackPort)
 	Log.Infof("using callback URL %q", cbUrl)
-	client := nokiahealth.NewClient(*consumerKey, *consumerSecret, cbUrl)
+  client := new(nokiahealth.Client)
+	*client = nokiahealth.NewClient(*consumerKey, *consumerSecret, cbUrl)
 
 	go func() {
 		for {
-			ScanMeasures(db, &client, twilio)
+			ScanMeasures(db, client, twilio)
 			time.Sleep(time.Minute)
 		}
 	}()
@@ -130,11 +131,11 @@ func main() {
 	sessionizer.HandleFunc("/", models.WithSession(db, http.DefaultServeMux.ServeHTTP))
 	sessionizer.HandleFunc("/login", models.WithNewSession(db, RequireNotAuth(db, LoginHandler(db))))
 
-	http.HandleFunc("/", RequireAuth(db, IndexHandler(db, &client)))
-	http.HandleFunc("/callback", RequireAuth(db, OauthHandler(db, &client)))
+	http.HandleFunc("/", RequireAuth(db, IndexHandler(db, client)))
+	http.HandleFunc("/callback", RequireAuth(db, OauthHandler(db, client)))
 	http.HandleFunc("/signup", RequireNotAuth(db, SignupHandler(db)))
 	http.HandleFunc("/logout", RequireAuth(db, LogoutHandler(db)))
-	http.HandleFunc("/measures", RequireAuth(db, RequireLink(db, MeasuresHandler(db, &client))))
+	http.HandleFunc("/measures", RequireAuth(db, RequireLink(db, MeasuresHandler(db, client))))
 	http.HandleFunc("/reauth", RequireAuth(db, RequireLink(db, ReauthHandler(db))))
 	http.HandleFunc("/phone", RequireAuth(db, PhoneHandler(db)))
 	http.HandleFunc("/kgs", RequireAuth(db, KgsHandler(db)))

@@ -10,7 +10,6 @@ import (
 	"github.com/jrmycanady/nokiahealth"
 	. "github.com/pdbogen/vator/log"
 	"golang.org/x/crypto/bcrypt"
-	"golang.org/x/oauth2"
 	"math/rand"
 	"net/http"
 	"sort"
@@ -44,7 +43,7 @@ type Weight struct {
 
 var UserNotFound = errors.New("user not found")
 
-func (u *User) NokiaUser(db *bbolt.DB, client nokiahealth.Client) (*nokiahealth.User, error) {
+func (u *User) NokiaUser(db *bbolt.DB, client *nokiahealth.Client) (*nokiahealth.User, error) {
 	if u.RefreshSecret == "" {
 		return nil, errors.New("not linked")
 	}
@@ -149,11 +148,12 @@ func GetUsers(db *bbolt.DB) []User {
 	return users
 }
 
-func (u *User) GetWeights(db *bbolt.DB, withings nokiahealth.Client) ([]nokiahealth.Weight, error) {
+func (u *User) GetWeights(db *bbolt.DB, withings *nokiahealth.Client) ([]nokiahealth.Weight, error) {
 	return u.GetWeightsSince(db, withings, time.Now().AddDate(0, 0, -200))
 }
 
-func (u *User) GetWeightsSince(db *bbolt.DB, withings nokiahealth.Client, since time.Time) ([]nokiahealth.Weight, error) {
+func (u *User) GetWeightsSince(db *bbolt.DB, withings *nokiahealth.Client, since time.Time) ([]nokiahealth.Weight,
+	error) {
 	nuser, err := u.NokiaUser(db, withings)
 	if err != nil {
 		return nil, err
