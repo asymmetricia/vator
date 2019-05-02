@@ -135,12 +135,15 @@ func GetUsers(db *bbolt.DB) []User {
 }
 
 func (u *User) SaveRefreshToken(db *bbolt.DB, nuser *nokiahealth.User) {
-	if nuser.CurrentRefreshToken != u.RefreshSecret {
-		log.Debugf("saving updated refresh secret for user %q", u.Username)
-		u.RefreshSecret = nuser.CurrentRefreshToken
-		if err := u.Save(db); err != nil {
-			log.Errorf("saving user due to refresh token update: %v", err)
-		}
+	if nuser.CurrentRefreshToken == u.RefreshSecret {
+		log.Debugf("user %q refresh token unchanged", u.Username)
+		return
+	}
+
+	log.Debugf("saving updated refresh secret for user %q", u.Username)
+	u.RefreshSecret = nuser.CurrentRefreshToken
+	if err := u.Save(db); err != nil {
+		log.Errorf("saving user due to refresh token update: %v", err)
 	}
 }
 
