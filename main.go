@@ -112,7 +112,7 @@ func main() {
 
 	cbUrl := callbackUrl(*callbackProto, *callbackDomain, *callbackPort)
 	Log.Infof("using callback URL %q", cbUrl)
-  client := new(nokiahealth.Client)
+	client := new(nokiahealth.Client)
 	*client = nokiahealth.NewClient(*consumerKey, *consumerSecret, cbUrl)
 
 	go func() {
