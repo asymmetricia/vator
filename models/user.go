@@ -48,20 +48,7 @@ func (u *User) NokiaUser(db *bbolt.DB, client *nokiahealth.Client) (*nokiahealth
 		return nil, errors.New("not linked")
 	}
 
-	nuser, err := client.NewUserFromRefreshToken(context.Background(), u.AccessToken, u.RefreshSecret, u.TokenExpiry)
-
-	if err != nil {
-		return nil, fmt.Errorf("getting user: %s", err)
-	}
-
-	if u.RefreshSecret != nuser.OauthToken.RefreshToken {
-		u.RefreshSecret = nuser.OauthToken.RefreshToken
-		if err := u.Save(db); err != nil {
-			return nil, fmt.Errorf("saving updated user to DB: %s", err)
-		}
-	}
-
-	return nuser, nil
+	return client.NewUserFromRefreshToken(context.Background(), u.RefreshSecret), nil
 }
 
 func LoadUserRequest(db *bbolt.DB, req *http.Request) (*User, error) {
@@ -70,6 +57,7 @@ func LoadUserRequest(db *bbolt.DB, req *http.Request) (*User, error) {
 	}
 	return nil, errors.New("no user in request context")
 }
+
 func LoadUser(db *bbolt.DB, username string) (*User, error) {
 	var user *User
 	err := db.View(func(tx *bbolt.Tx) error {
@@ -173,10 +161,10 @@ func (u *User) GetWeightsSince(db *bbolt.DB, withings *nokiahealth.Client, since
 	}
 
 	measureResp, err := nuser.GetBodyMeasures(&nokiahealth.BodyMeasuresQueryParams{StartDate: &since})
+	u.SaveRefreshToken(db, nuser)
 	if err != nil {
 		return nil, err
 	}
-	u.SaveRefreshToken(db, nuser)
 	measures := measureResp.ParseData()
 
 	return measures.Weights, nil
