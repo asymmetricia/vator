@@ -9,4 +9,4 @@ require (
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 )
 
-replace github.com/jrmycanady/nokiahealth => github.com/pdbogen/nokiahealth v0.0.0-20190420182021-a17f46a48f80
+replace github.com/jrmycanady/nokiahealth => github.com/pdbogen/nokiahealth v0.0.0-20190519005512-e89095e5fd5a

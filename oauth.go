@@ -54,15 +54,11 @@ func OauthHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.Response
 			return
 		}
 
-		token, err := withingsUser.Token()
-		if err != nil {
-			Bail(rw, req, fmt.Errorf("getting token from withings user: %s", err), http.StatusBadRequest)
-			return
-		}
+		token := withingsUser.OauthToken
 
-		user.OauthTime = time.Now()
 		user.AccessToken = token.AccessToken
 		user.RefreshSecret = token.RefreshToken
+		user.TokenExpiry = token.Expiry
 		if err := user.Save(db); err != nil {
 			Bail(rw, req, fmt.Errorf("saving user: %s", err), http.StatusInternalServerError)
 			return

@@ -32,6 +32,7 @@ type User struct {
 	OauthTime      time.Time
 	AccessToken    string
 	RefreshSecret  string
+	TokenExpiry    time.Time
 	Kgs            bool
 }
 
@@ -47,7 +48,20 @@ func (u *User) NokiaUser(db *bbolt.DB, client *nokiahealth.Client) (*nokiahealth
 		return nil, errors.New("not linked")
 	}
 
-	return client.NewUserFromRefreshToken(context.Background(), u.AccessToken, u.RefreshSecret)
+	nuser, err := client.NewUserFromRefreshToken(context.Background(), u.AccessToken, u.RefreshSecret, u.TokenExpiry)
+
+	if err != nil {
+		return nil, fmt.Errorf("getting user: %s", err)
+	}
+
+	if u.RefreshSecret != nuser.OauthToken.RefreshToken {
+		u.RefreshSecret = nuser.OauthToken.RefreshToken
+		if err := u.Save(db); err != nil {
+			return nil, fmt.Errorf("saving updated user to DB: %s", err)
+		}
+	}
+
+	return nuser, nil
 }
 
 func LoadUserRequest(db *bbolt.DB, req *http.Request) (*User, error) {
@@ -135,13 +149,13 @@ func GetUsers(db *bbolt.DB) []User {
 }
 
 func (u *User) SaveRefreshToken(db *bbolt.DB, nuser *nokiahealth.User) {
-	if nuser.CurrentRefreshToken == u.RefreshSecret {
+	if nuser.OauthToken.RefreshToken == u.RefreshSecret {
 		log.Debugf("user %q refresh token unchanged", u.Username)
 		return
 	}
 
 	log.Debugf("saving updated refresh secret for user %q", u.Username)
-	u.RefreshSecret = nuser.CurrentRefreshToken
+	u.RefreshSecret = nuser.OauthToken.RefreshToken
 	if err := u.Save(db); err != nil {
 		log.Errorf("saving user due to refresh token update: %v", err)
 	}
