@@ -129,7 +129,7 @@ func GetUsers(db *bbolt.DB) []User {
 			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("unexpected error iterating over contents of users bicket: %s", err)
+			return fmt.Errorf("unexpected error iterating over contents of users bucket: %s", err)
 		}
 		return nil
 	})
@@ -318,9 +318,16 @@ func (u *User) Summary(twilio *Twilio, db *bbolt.DB, force bool) {
 	}
 
 	// One summary per day
-	if !force && time.Now().Sub(u.LastSummary).Hours() > 24 {
+	if !force && time.Now().Sub(u.LastSummary).Hours() < 25 {
 		return
 	}
+
+	log.Debugf(
+		"summary: today is %s and last summary was %.01f hours ago; producing summary for %q",
+		time.Now().Weekday().String(),
+		time.Now().Sub(u.LastSummary).Hours(),
+		u.Username,
+	)
 
 	msg := fmt.Sprintf("Since %s:", time.Now().AddDate(0, 0, -7).Format("Mon Jan 2 2006"))
 	for _, delta := range []int{5, 30} {

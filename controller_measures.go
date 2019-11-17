@@ -64,6 +64,8 @@ func ScanMeasures(db *bbolt.DB, withings *nokiahealth.Client, twilio *models.Twi
 			continue
 		}
 		go u.Toast(twilio)
+		go u.Summary(twilio, db, false)
+
 		Log.Infof("logged %d new measurement(s) for user %q", len(weights), u.Username)
 	}
 }

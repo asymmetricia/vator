@@ -122,6 +122,11 @@ func main() {
 		}
 	}()
 
+	// Send summaries on start, if it's the right time
+	for _, user := range models.GetUsers(db) {
+		go user.Summary(twilio, db, false)
+	}
+
 	certmgr := autocert.Manager{
 		Prompt:     autocert.AcceptTOS,
 		HostPolicy: autocert.HostWhitelist(*callbackDomain),
