@@ -61,5 +61,6 @@ Phone Number: <form action="/phone" method="POST">
 <form id="kgs" action="/kgs" method="POST">
 	Use Kilograms: <input type="checkbox" name="kgs" {{#kgs}}checked{{/kgs}} onchange="document.getElementById('kgs').submit();"/>
 </form>
-Maybe you'd like to <a href='/measures'>view your recent measurements</a>?'
+Maybe you'd like to <a href='/measures'>view your recent measurements</a>?'<br/>
+Or trigger a <a href='/summary'>Weekly Summary</a>?
 `

@@ -9,7 +9,9 @@ import (
 	"github.com/coreos/bbolt"
 	"github.com/jrmycanady/nokiahealth"
 	. "github.com/pdbogen/vator/log"
+	errors2 "github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
+	"math"
 	"math/rand"
 	"net/http"
 	"sort"
@@ -34,6 +36,7 @@ type User struct {
 	RefreshSecret  string
 	TokenExpiry    time.Time
 	Kgs            bool
+	LastSummary    time.Time
 }
 
 type Weight struct {
@@ -106,7 +109,7 @@ func (u *User) SetPassword(newPassword string) error {
 }
 
 func GetUsers(db *bbolt.DB) []User {
-	users := []User{}
+	var users []User
 	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte("users"))
 		if b == nil {
@@ -150,7 +153,7 @@ func (u *User) SaveRefreshToken(db *bbolt.DB, nuser *nokiahealth.User) {
 }
 
 func (u *User) GetWeights(db *bbolt.DB, withings *nokiahealth.Client) ([]nokiahealth.Weight, error) {
-	return u.GetWeightsSince(db, withings, time.Now().AddDate(0, 0, -200))
+	return u.GetWeightsSince(db, withings, time.Now().AddDate(0, 0, -37))
 }
 
 func (u *User) GetWeightsSince(db *bbolt.DB, withings *nokiahealth.Client, since time.Time) ([]nokiahealth.Weight,
@@ -174,18 +177,16 @@ func (u *User) GetWeightsSince(db *bbolt.DB, withings *nokiahealth.Client, since
 // `shift` specifies how many days in the past the window should be moved. An error will be returned if there are not
 // enough samples.
 func (u User) MovingAverageWeight(days int, shift int) (float64, error) {
-	samples := []float64{}
-	for mod := 0; mod < days; mod++ {
-		daySamples := []float64{}
+	var samples []float64
+	for cursor := 0; cursor < days; cursor++ {
+		var daySamples []float64
+		targetDay := time.Now().AddDate(0, 0, -shift-cursor).Truncate(24 * time.Hour)
 		for i := len(u.Weights) - 1; i >= 0; i-- {
-			tgt := time.Now().AddDate(0, 0, -shift-mod).Truncate(24 * time.Hour)
-			wDate := u.Weights[i].Date.Truncate(24 * time.Hour)
-			if tgt.Equal(wDate) {
-				daySamples = append(daySamples, u.Weights[i].Kgs)
+			weightDay := u.Weights[i].Date.Truncate(24 * time.Hour)
+			if !targetDay.Equal(weightDay) {
+				continue
 			}
-			if tgt.After(wDate) {
-				break
-			}
+			daySamples = append(daySamples, u.Weights[i].Kgs)
 		}
 		var sum float64
 		for _, s := range daySamples {
@@ -205,20 +206,20 @@ func (u User) MovingAverageWeight(days int, shift int) (float64, error) {
 	return 0, errors.New("insufficient samples")
 }
 
-func (u User) sendSms(twilio *Twilio, message string) {
+func (u User) sendSms(twilio *Twilio, message string) error {
 	if u.Phone == "" {
-		Log.Warningf("user %q has no registered phone, cannot toast", u.Username)
-		return
+		return fmt.Errorf("user %q has no registered phone, cannot toast", u.Username)
 	}
 
 	if twilio == nil {
-		log.Warning("twilio mis- or unconfigured, cannot toast")
-		return
+		return errors.New("twilio mis- or unconfigured, cannot toast")
 	}
 
 	if err := twilio.SendSms(u.Phone, message); err != nil {
-		log.Errorf("sending toast to %s at %s: %s", u.Username, u.Phone, err)
+		return errors2.WithMessagef(err, "sending toast to %s at %s", u.Username, u.Phone)
 	}
+
+	return nil
 }
 
 var InsufficientData = errors.New("insufficient data")
@@ -273,7 +274,9 @@ func (u User) toastN(days int, twilio *Twilio, encourage bool) error {
 		log.Errorf("rendering toast template %q: %s", tmpl, err)
 		return errors.New("template failed")
 	}
-	u.sendSms(twilio, msg)
+	if err := u.sendSms(twilio, msg); err != nil {
+		log.Errorf("failed sending toast: %s", err)
+	}
 
 	return nil
 }
@@ -300,10 +303,68 @@ func (u User) Toast(twilio *Twilio) {
 		log.Debugf("encouraging %q to provide more data", u.Username)
 		// send not enough data message
 		msg := notEnoughData[rand.Intn(len(notEnoughData))]
-		u.sendSms(twilio, msg)
+		if err := u.sendSms(twilio, msg); err != nil {
+			log.Errorf("failed sending toast: %w", err)
+		}
 		return
 	}
 	log.Debugf("confusing toast results for %q: 5=%q, 30=%q", u.Username, fiveErr, thirtyErr)
+}
+
+func (u *User) Summary(twilio *Twilio, db *bbolt.DB, force bool) {
+	// Weekly summaries only on Sunday
+	if !force && time.Now().Weekday() != time.Sunday {
+		return
+	}
+
+	// One summary per day
+	if !force && time.Now().Sub(u.LastSummary).Hours() > 24 {
+		return
+	}
+
+	msg := fmt.Sprintf("Since %s:", time.Now().AddDate(0, 0, -7).Format("Mon Jan 2 2006"))
+	for _, delta := range []int{5, 30} {
+		msg += fmt.Sprintf("\n%d-day Average: ", delta)
+		now, err := u.MovingAverageWeight(delta, 0)
+		if err != nil {
+			log.Errorf("calculating current %d-day moving average for %q: %w", delta, u.Username, err)
+			msg += "insufficient data :("
+			continue
+		}
+
+		then, err := u.MovingAverageWeight(delta, 7)
+		if err != nil {
+			log.Errorf("calculating 7-day-shifted %d-day moving average for %q: %w", delta, u.Username, err)
+			msg += "insufficient data :("
+			continue
+		}
+
+		if now <= then {
+			msg += " down "
+		} else {
+			msg += " up "
+		}
+
+		msg += u.FormatKg(math.Abs(now-then)) + u.Unit()
+	}
+
+	weighs := 0
+	for _, w := range u.Weights {
+		if w.Date.After(time.Now().Add(-7 * 24 * time.Hour)) {
+			weighs++
+		}
+	}
+	msg += fmt.Sprintf("\n%d weigh-ins on record", weighs)
+
+	if err := u.sendSms(twilio, msg); err != nil {
+		log.Errorf("failed sending weekly summary: %w", err)
+		return
+	}
+
+	u.LastSummary = time.Now()
+	if err := u.Save(db); err != nil {
+		log.Errorf("failed to update LastSummary date: %w", err)
+	}
 }
 
 func (u User) FormatKg(kgs float64) string {

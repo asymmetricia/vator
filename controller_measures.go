@@ -7,6 +7,7 @@ import (
 	. "github.com/pdbogen/vator/log"
 	"github.com/pdbogen/vator/models"
 	"net/http"
+	"sort"
 	"time"
 )
 
@@ -24,11 +25,10 @@ func MeasuresHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.Respo
 			Bail(rw, req, err, http.StatusInternalServerError)
 			return
 		}
-		if len(weights) > 5 {
-			weights = weights[0:5]
-		}
-		for i := len(weights) - 1; i >= 0; i-- {
-			w := weights[i]
+		for _, w := range weights {
+			if w.Date.Before(time.Now().Add(-14 * 24 * time.Hour)) {
+				return
+			}
 			if _, err := fmt.Fprintln(rw, w.Date, " ", u.FormatKg(w.Kgs)); err != nil {
 				Log.Errorf("writing output to user: %s", err)
 				return
@@ -40,7 +40,7 @@ func MeasuresHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.Respo
 func ScanMeasures(db *bbolt.DB, withings *nokiahealth.Client, twilio *models.Twilio) {
 	for _, u := range models.GetUsers(db) {
 		if u.LastWeight.IsZero() {
-			u.LastWeight = time.Now().AddDate(0, 0, -200)
+			u.LastWeight = time.Now().AddDate(0, 0, -37)
 		}
 		weights, err := u.GetWeightsSince(db, withings, u.LastWeight.Add(time.Minute))
 		if err != nil {
@@ -57,6 +57,8 @@ func ScanMeasures(db *bbolt.DB, withings *nokiahealth.Client, twilio *models.Twi
 			}
 			u.Weights = append(u.Weights, models.Weight{w.Date, w.Kgs})
 		}
+		sort.Slice(u.Weights, func(i, j int) bool { return u.Weights[i].Date.Before(u.Weights[j].Date) })
+
 		if err := u.Save(db); err != nil {
 			Log.Warning("saving user %q after logging weights: %s", u.Username, err)
 			continue

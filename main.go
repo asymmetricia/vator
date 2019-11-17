@@ -139,6 +139,7 @@ func main() {
 	http.HandleFunc("/reauth", RequireAuth(db, RequireLink(db, ReauthHandler(db))))
 	http.HandleFunc("/phone", RequireAuth(db, PhoneHandler(db)))
 	http.HandleFunc("/kgs", RequireAuth(db, KgsHandler(db)))
+	http.HandleFunc("/summary", RequireAuth(db, RequireLink(db, SummaryHandler(db, twilio))))
 	Log.Infof("Listening on port %d", *port)
 
 	if *tlsEnabled {

@@ -5,6 +5,7 @@ require (
 	github.com/coreos/bbolt v1.3.2
 	github.com/jrmycanady/nokiahealth v0.0.0-20180822201906-bc0ce2b8e4bc
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
+	github.com/pkg/errors v0.8.1
 	go.etcd.io/bbolt v1.3.2 // indirect
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 )
