@@ -37,6 +37,7 @@ type User struct {
 	TokenExpiry    time.Time
 	Kgs            bool
 	LastSummary    time.Time
+	TimezoneName   string
 }
 
 type Weight struct {
@@ -108,16 +109,16 @@ func (u *User) SetPassword(newPassword string) error {
 	return nil
 }
 
-func GetUsers(db *bbolt.DB) []User {
-	var users []User
+func GetUsers(db *bbolt.DB) []*User {
+	var users []*User
 	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte("users"))
 		if b == nil {
 			return nil
 		}
 		err := b.ForEach(func(k, v []byte) error {
-			var u User
-			if err := json.Unmarshal(v, &u); err != nil {
+			u := &User{}
+			if err := json.Unmarshal(v, u); err != nil {
 				Log.Warning("skipping unparseable user %s: %q", string(k), string(v))
 				return nil
 			}
@@ -312,8 +313,9 @@ func (u User) Toast(twilio *Twilio) {
 }
 
 func (u *User) Summary(twilio *Twilio, db *bbolt.DB, force bool) {
+	userTz := u.Timezone()
 	// Weekly summaries only on Sunday
-	if !force && time.Now().Weekday() != time.Sunday {
+	if !force && time.Now().In(userTz).Weekday() != time.Sunday {
 		return
 	}
 
@@ -324,12 +326,14 @@ func (u *User) Summary(twilio *Twilio, db *bbolt.DB, force bool) {
 
 	log.Debugf(
 		"summary: today is %s and last summary was %.01f hours ago; producing summary for %q",
-		time.Now().Weekday().String(),
+		time.Now().In(userTz).Weekday().String(),
 		time.Now().Sub(u.LastSummary).Hours(),
 		u.Username,
 	)
 
-	msg := fmt.Sprintf("Since %s:", time.Now().AddDate(0, 0, -7).Format("Mon Jan 2 2006"))
+	msg := fmt.Sprintf("Since %s:",
+		time.Now().In(userTz).AddDate(0, 0, -7).Format("Mon Jan 2 2006"))
+
 	for _, delta := range []int{5, 30} {
 		msg += fmt.Sprintf("\n%d-day Average: ", delta)
 		now, err := u.MovingAverageWeight(delta, 0)
@@ -387,4 +391,23 @@ func (u User) Unit() string {
 		return "kg"
 	}
 	return "lb"
+}
+
+func (u User) Timezone() *time.Location {
+	if u.TimezoneName == "" {
+		u.TimezoneName = "America/Los_Angeles"
+	}
+
+	loc, err := time.LoadLocation(u.TimezoneName)
+	if err != nil {
+		log.Error("user %q has bad time zone %q: %w", u.TimezoneName, err)
+		loc, err = time.LoadLocation("America/Los_Angeles")
+	}
+
+	if err != nil {
+		log.Error("could not load tz America/Los_Angeles: %w", err)
+		return time.UTC
+	}
+
+	return loc
 }

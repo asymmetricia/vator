@@ -122,16 +122,6 @@ func main() {
 		}
 	}()
 
-	// Send summaries on start, if it's the right time
-	for _, user := range models.GetUsers(db) {
-		go user.Summary(twilio, db, false)
-	}
-
-	certmgr := autocert.Manager{
-		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist(*callbackDomain),
-	}
-
 	sessionizer := http.NewServeMux()
 	sessionizer.HandleFunc("/", models.WithSession(db, http.DefaultServeMux.ServeHTTP))
 	sessionizer.HandleFunc("/login", models.WithNewSession(db, RequireNotAuth(db, LoginHandler(db))))
@@ -148,6 +138,11 @@ func main() {
 	Log.Infof("Listening on port %d", *port)
 
 	if *tlsEnabled {
+		certmgr := autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(*callbackDomain),
+		}
+
 		server := &http.Server{
 			Addr:      fmt.Sprintf(":%d", *port),
 			Handler:   sessionizer,
