@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/coreos/bbolt"
-	"github.com/jrmycanady/nokiahealth"
-	. "github.com/pdbogen/vator/log"
-	"github.com/pdbogen/vator/models"
 	"net/http"
 	"sort"
 	"time"
+
+	"github.com/jrmycanady/nokiahealth"
+	. "github.com/pdbogen/vator/log"
+	"github.com/pdbogen/vator/models"
+	"go.etcd.io/bbolt"
 )
 
 func MeasuresHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.ResponseWriter, *http.Request) {

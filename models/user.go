@@ -5,18 +5,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/cbroglie/mustache"
-	"github.com/coreos/bbolt"
-	"github.com/jrmycanady/nokiahealth"
-	. "github.com/pdbogen/vator/log"
-	errors2 "github.com/pkg/errors"
-	"golang.org/x/crypto/bcrypt"
 	"math"
 	"math/rand"
 	"net/http"
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/cbroglie/mustache"
+	"github.com/jrmycanady/nokiahealth"
+	. "github.com/pdbogen/vator/log"
+	errors2 "github.com/pkg/errors"
+	"go.etcd.io/bbolt"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const PoundsFromKg = 2.2046226218

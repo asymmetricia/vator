@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/coreos/bbolt"
 	"github.com/pdbogen/vator/models"
+	"go.etcd.io/bbolt"
+
 	"net/http"
 )
 

@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cbroglie/mustache"
-	"github.com/coreos/bbolt"
-	. "github.com/pdbogen/vator/log"
-	"github.com/pdbogen/vator/models"
-	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"time"
+
+	"github.com/cbroglie/mustache"
+	. "github.com/pdbogen/vator/log"
+	"github.com/pdbogen/vator/models"
+	"go.etcd.io/bbolt"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func Bail(rw http.ResponseWriter, req *http.Request, err error, status int) {

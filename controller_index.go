@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/coreos/bbolt"
+	"net/http"
+
 	"github.com/jrmycanady/nokiahealth"
 	"github.com/pdbogen/vator/models"
-	"net/http"
+	"go.etcd.io/bbolt"
 )
 
 func IndexHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
@@ -16,7 +17,7 @@ func IndexHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.Response
 			return
 		}
 		if user.RefreshSecret == "" {
-			BeginOauth(db, withings, rw, req)
+			WithingsBeginOauth(db, withings, rw, req)
 		} else {
 			ctx, err := notifications(db, req)
 			if err != nil {

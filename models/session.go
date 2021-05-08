@@ -7,11 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/coreos/bbolt"
-	. "github.com/pdbogen/vator/log"
 	"net/http"
 	"strconv"
 	"time"
+
+	. "github.com/pdbogen/vator/log"
+	"go.etcd.io/bbolt"
 )
 
 // WithNewSession returns an http handler function that wraps an underlying

@@ -4,16 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/coreos/bbolt"
-	"github.com/jrmycanady/nokiahealth"
-	"github.com/pdbogen/vator/models"
 	"net/http"
 	"time"
+
+	"github.com/jrmycanady/nokiahealth"
+	"github.com/pdbogen/vator/models"
+	"go.etcd.io/bbolt"
 )
 
 const StatesBucket = "states"
 
-func OauthHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
+func WithingsOauthHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
 	return RequireForm([]string{"code", "state"}, func(rw http.ResponseWriter, req *http.Request) {
 		user, err := models.LoadUserRequest(db, req)
 		if err != nil {
@@ -68,43 +69,7 @@ func OauthHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.Response
 	})
 }
 
-func SaveState(db *bbolt.DB, state string) error {
-	return db.Update(func(tx *bbolt.Tx) error {
-		bucket, err := tx.CreateBucketIfNotExists([]byte(StatesBucket))
-		if err != nil {
-			return fmt.Errorf("getting `%s` bucket: %s", StatesBucket, err)
-		}
-
-		var deletions [][]byte
-		err = bucket.ForEach(func(k, v []byte) error {
-			var expiry time.Time
-			if err := expiry.UnmarshalText(v); err != nil {
-				deletions = append(deletions, k)
-				return nil
-			}
-			if expiry.Before(time.Now()) {
-				deletions = append(deletions, k)
-			}
-			return nil
-		})
-		if err != nil {
-			panic(err)
-		}
-		for _, del := range deletions {
-			if err := bucket.Delete(del); err != nil {
-				panic(err)
-			}
-		}
-
-		expiry, err := time.Now().Add(time.Hour).MarshalText()
-		if err != nil {
-			panic(err)
-		}
-		return bucket.Put([]byte(state), expiry)
-	})
-}
-
-func BeginOauth(db *bbolt.DB, withings *nokiahealth.Client, rw http.ResponseWriter, req *http.Request) {
+func WithingsBeginOauth(db *bbolt.DB, withings *nokiahealth.Client, rw http.ResponseWriter, req *http.Request) {
 	url, state, err := withings.AuthCodeURL()
 	if err != nil {
 		Bail(rw, req, fmt.Errorf("generating authorization URL: %s", err), http.StatusInternalServerError)
@@ -119,7 +84,7 @@ func BeginOauth(db *bbolt.DB, withings *nokiahealth.Client, rw http.ResponseWrit
 	StaticGet(rw, req, fmt.Sprintf("Welcome to vator! Click <a href='%s'>here</a> to link up to your Withings account.", url))
 }
 
-func ReauthHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
+func WithingsReauthHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		user, err := models.LoadUserRequest(db, req)
 		if err != nil {

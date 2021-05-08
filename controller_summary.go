@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/coreos/bbolt"
-	"github.com/pdbogen/vator/models"
 	"net/http"
+
+	"github.com/pdbogen/vator/models"
+	"go.etcd.io/bbolt"
 )
 
 func SummaryHandler(db *bbolt.DB, twilio *models.Twilio) func(http.ResponseWriter, *http.Request) {

@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"github.com/coreos/bbolt"
 	. "github.com/pdbogen/vator/log"
 	"github.com/pdbogen/vator/models"
 	"os"

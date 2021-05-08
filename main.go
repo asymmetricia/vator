@@ -1,18 +1,19 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
-	"github.com/coreos/bbolt"
-	"github.com/jrmycanady/nokiahealth"
-	. "github.com/pdbogen/vator/log"
-
-	"crypto/tls"
-	"github.com/pdbogen/vator/models"
-	"golang.org/x/crypto/acme/autocert"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/jrmycanady/nokiahealth"
+	. "github.com/pdbogen/vator/log"
+	"go.etcd.io/bbolt"
+
+	"github.com/pdbogen/vator/models"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 // RequireForm returns an func(http.ResponseWriter,*http.Request) that wraps the given `handler`, ensuring
@@ -127,11 +128,11 @@ func main() {
 	sessionizer.HandleFunc("/login", models.WithNewSession(db, RequireNotAuth(db, LoginHandler(db))))
 
 	http.HandleFunc("/", RequireAuth(db, IndexHandler(db, client)))
-	http.HandleFunc("/callback", RequireAuth(db, OauthHandler(db, client)))
+	http.HandleFunc("/callback", RequireAuth(db, WithingsOauthHandler(db, client)))
 	http.HandleFunc("/signup", RequireNotAuth(db, SignupHandler(db)))
 	http.HandleFunc("/logout", RequireAuth(db, LogoutHandler(db)))
 	http.HandleFunc("/measures", RequireAuth(db, RequireLink(db, MeasuresHandler(db, client))))
-	http.HandleFunc("/reauth", RequireAuth(db, RequireLink(db, ReauthHandler(db))))
+	http.HandleFunc("/reauth", RequireAuth(db, RequireLink(db, WithingsReauthHandler(db))))
 	http.HandleFunc("/phone", RequireAuth(db, PhoneHandler(db)))
 	http.HandleFunc("/kgs", RequireAuth(db, KgsHandler(db)))
 	http.HandleFunc("/summary", RequireAuth(db, RequireLink(db, SummaryHandler(db, twilio))))
