@@ -69,7 +69,7 @@ func LoginHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 		case "POST":
 			RequireForm([]string{"username", "password"}, LoginHandlerPost(db))(rw, req)
 		default:
-			StaticGet(rw, req, loginHtml)
+			TemplateGet(rw, req, "login.tmpl", TemplateContext{})
 		}
 	}
 }

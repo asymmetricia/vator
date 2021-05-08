@@ -83,8 +83,8 @@ func main() {
 	}
 
 	for n, f := range map[string]*string{
-		"-consumer-key":           consumerKey,
-		"-consumer-secret":        consumerSecret,
+		"-consumer-key":    consumerKey,
+		"-consumer-secret": consumerSecret,
 	} {
 		if *f == "" {
 			log.Fatalf("%s must be provided", n)
