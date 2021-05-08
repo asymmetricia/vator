@@ -32,13 +32,15 @@ type User struct {
 	LastWeight     time.Time
 	Weights        []Weight
 	Phone          string
-	OauthTime      time.Time
-	AccessToken    string
-	RefreshSecret  string
-	TokenExpiry    time.Time
-	Kgs            bool
-	LastSummary    time.Time
-	TimezoneName   string
+
+	OauthTime     time.Time
+	AccessToken   string
+	RefreshSecret string
+	TokenExpiry   time.Time
+
+	Kgs          bool
+	LastSummary  time.Time
+	TimezoneName string
 }
 
 type Weight struct {

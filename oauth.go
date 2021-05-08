@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/jrmycanady/nokiahealth"
 	"github.com/pdbogen/vator/models"
@@ -22,28 +20,8 @@ func WithingsOauthHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.
 			return
 		}
 
-		err = db.Update(func(tx *bbolt.Tx) error {
-			states := tx.Bucket([]byte(StatesBucket))
-			if states == nil {
-				return errors.New("state bucket not found")
-			}
+		err = ConsumeState(db, req.Form.Get("state"))
 
-			state := states.Get([]byte(req.Form.Get("state")))
-			if state == nil {
-				return errors.New("state entry not found")
-			}
-
-			var expiry time.Time
-			if err := expiry.UnmarshalText(state); err != nil {
-				return fmt.Errorf("state expiry %q not valid", string(state))
-			}
-
-			if expiry.Before(time.Now()) {
-				return fmt.Errorf("state expired at %s", expiry.Format(time.RFC1123Z))
-			}
-
-			return nil
-		})
 		if err != nil {
 			Bail(rw, req, fmt.Errorf("state %q: %s", req.Form.Get("state"), err), http.StatusBadRequest)
 			return

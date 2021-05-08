@@ -32,7 +32,7 @@ push-prod: .push-prod
 	docker tag vator ${IMAGE_URL}
 	touch .docker-prod
 
-vator: ${shell find -name \*.go}
+vator: ${shell find -name \*.go} ${shell find templates}
 	go fmt github.com/pdbogen/vator/...
 	go build -o vator
 

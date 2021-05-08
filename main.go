@@ -10,9 +10,8 @@ import (
 
 	"github.com/jrmycanady/nokiahealth"
 	. "github.com/pdbogen/vator/log"
-	"go.etcd.io/bbolt"
-
 	"github.com/pdbogen/vator/models"
+	"go.etcd.io/bbolt"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -52,11 +51,11 @@ func RequireLink(db *bbolt.DB, handler func(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-func callbackUrl(proto string, domain string, port int) string {
+func callbackUrl(proto string, domain string, port int, path string) string {
 	if proto == "https" && port == 443 || proto == "http" && port == 80 {
-		return proto + "://" + domain + "/callback"
+		return proto + "://" + domain + "/" + path
 	}
-	return fmt.Sprintf("%s://%s:%d/callback", proto, domain, port)
+	return fmt.Sprintf("%s://%s:%d/%s", proto, domain, port, path)
 }
 
 func main() {
@@ -83,11 +82,13 @@ func main() {
 		}
 	}
 
-	if *consumerKey == "" {
-		Log.Fatal("consumer key must be provided")
-	}
-	if *consumerSecret == "" {
-		Log.Fatal("consumer secret must be provided")
+	for n, f := range map[string]*string{
+		"-consumer-key":           consumerKey,
+		"-consumer-secret":        consumerSecret,
+	} {
+		if *f == "" {
+			log.Fatalf("%s must be provided", n)
+		}
 	}
 
 	var twilio *models.Twilio
@@ -111,7 +112,7 @@ func main() {
 	}
 	defer db.Close()
 
-	cbUrl := callbackUrl(*callbackProto, *callbackDomain, *callbackPort)
+	cbUrl := callbackUrl(*callbackProto, *callbackDomain, *callbackPort, "callback")
 	Log.Infof("using callback URL %q", cbUrl)
 	client := new(nokiahealth.Client)
 	*client = nokiahealth.NewClient(*consumerKey, *consumerSecret, cbUrl)
@@ -132,6 +133,7 @@ func main() {
 	http.HandleFunc("/signup", RequireNotAuth(db, SignupHandler(db)))
 	http.HandleFunc("/logout", RequireAuth(db, LogoutHandler(db)))
 	http.HandleFunc("/measures", RequireAuth(db, RequireLink(db, MeasuresHandler(db, client))))
+
 	http.HandleFunc("/reauth", RequireAuth(db, RequireLink(db, WithingsReauthHandler(db))))
 	http.HandleFunc("/phone", RequireAuth(db, PhoneHandler(db)))
 	http.HandleFunc("/kgs", RequireAuth(db, KgsHandler(db)))

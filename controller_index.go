@@ -27,7 +27,7 @@ func IndexHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.Response
 			ctx.Phone = user.Phone
 			ctx.Kgs = user.Kgs
 
-			TemplateGet(rw, req, indexTemplate, ctx)
+			TemplateGet(rw, req, "index.tmpl", ctx)
 		}
 	}
 }

@@ -1,12 +1,39 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"go.etcd.io/bbolt"
 )
 
+func ConsumeState(db *bbolt.DB, state string) error {
+	return db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(StatesBucket))
+		if bucket == nil {
+			return errors.New("not found")
+		}
+
+		value := bucket.Get([]byte(state))
+		if value == nil {
+			return errors.New("not found")
+		}
+
+		bucket.Delete([]byte(state))
+
+		var expiry time.Time
+		if err := expiry.UnmarshalText(value); err != nil {
+			return errors.New("corrupt")
+		}
+
+		if expiry.Before(time.Now()) {
+			return errors.New("expired")
+		}
+
+		return nil
+	})
+}
 func SaveState(db *bbolt.DB, state string) error {
 	return db.Update(func(tx *bbolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists([]byte(StatesBucket))

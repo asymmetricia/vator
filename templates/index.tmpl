@@ -1,17 +1,19 @@
-{{template "preamble"}}
-{{template "error" .}}
-{{template "toast" .}}
-You're all set up! If something seems broken, click <a href='/reauth'>here</a> to re-authenticate to Withings.<br/>
+{{template "preamble.tmpl"}}
+{{template "error.tmpl" .}}
+{{template "toast.tmpl" .}}
+<ul>
+    <li>Withings: Linked <a href="/reauth">[reauthenticate]</a></li>
+</ul>
 &nbsp;<br/>
 Phone Number:
 <form action="/phone" method="POST">
-    <input type="text" name="phone" value="{{.phone}}" placeholder="123 456 7890"/>
+    <input type="text" name="phone" value="{{.Phone}}" placeholder="123 456 7890"/>
     <input type="submit" value="Save"/>
 </form>
 <form id="kgs" action="/kgs" method="POST">
-    Use Kilograms: <input type="checkbox" name="kgs" {{if .kgs}}checked{{end}}
+    Use Kilograms: <input type="checkbox" name="kgs" {{if .Kgs}}checked{{end}}
                           onchange="document.getElementById('kgs').submit();"/>
 </form>
 Maybe you'd like to <a href='/measures'>view your recent measurements</a>?'<br/>
 Or trigger a <a href='/summary'>Weekly Summary</a>?
-{{template "postamble"}}
+{{template "postamble.tmpl"}}

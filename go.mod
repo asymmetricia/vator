@@ -9,7 +9,6 @@ require (
 	github.com/cbroglie/mustache v1.2.0
 	github.com/chavacava/garif v0.0.0-20210405164556-e8a0a408d6af // indirect
 	github.com/go-critic/go-critic v0.5.6 // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golangci/golangci-lint v1.39.0 // indirect
 	github.com/gostaticanalysis/analysisutil v0.7.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -39,9 +38,9 @@ require (
 	golang.org/x/crypto v0.0.0-20210506145944-38f3c27a63bf
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/net v0.0.0-20210505214959-0714010a04ed // indirect
-	golang.org/x/oauth2 v0.0.0-20210427180440-81ed05c6b58c // indirect
+	golang.org/x/oauth2 v0.0.0-20210427180440-81ed05c6b58c
 	golang.org/x/sys v0.0.0-20210507161434-a76c4d0a0096 // indirect
-	google.golang.org/appengine v1.6.7 // indirect
+	google.golang.org/api v0.46.0
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	honnef.co/go/tools v0.1.4 // indirect
