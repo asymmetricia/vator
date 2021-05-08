@@ -117,10 +117,18 @@ func main() {
 	withingsClient := new(nokiahealth.Client)
 	*withingsClient = nokiahealth.NewClient(*consumerKey, *consumerSecret, cbUrl)
 
+	minutely := time.NewTicker(time.Minute)
 	go func() {
 		for {
 			ScanMeasures(db, withingsClient, twilio)
-			time.Sleep(time.Minute)
+			<-minutely.C
+		}
+	}()
+	go func() {
+		for {
+			time.Sleep(30 * time.Second)
+			BackfillMeasures(db, withingsClient)
+			<-minutely.C
 		}
 	}()
 

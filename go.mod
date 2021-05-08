@@ -7,6 +7,7 @@ require (
 	github.com/Djarvur/go-err113 v0.1.0 // indirect
 	github.com/bombsimon/wsl/v3 v3.3.0 // indirect
 	github.com/cbroglie/mustache v1.2.0
+	github.com/cenkalti/backoff/v4 v4.1.0 // indirect
 	github.com/chavacava/garif v0.0.0-20210405164556-e8a0a408d6af // indirect
 	github.com/go-critic/go-critic v0.5.6 // indirect
 	github.com/golangci/golangci-lint v1.39.0 // indirect

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/cbroglie/mustache"
@@ -27,10 +28,14 @@ func init() {
 }
 
 type User struct {
+	Mu sync.RWMutex
+
 	Username       string
 	HashedPassword []byte
 	LastWeight     time.Time
+	BackFillDate   time.Time
 	Weights        []Weight
+	WeightsMu      sync.RWMutex
 	Phone          string
 
 	OauthTime     time.Time
@@ -50,7 +55,7 @@ type Weight struct {
 
 var UserNotFound = errors.New("user not found")
 
-func (u *User) NokiaUser(db *bbolt.DB, client *nokiahealth.Client) (*nokiahealth.User, error) {
+func (u *User) NokiaUser(client *nokiahealth.Client) (*nokiahealth.User, error) {
 	if u.RefreshSecret == "" {
 		return nil, errors.New("not linked")
 	}
@@ -122,7 +127,7 @@ func GetUsers(db *bbolt.DB) []*User {
 		err := b.ForEach(func(k, v []byte) error {
 			u := &User{}
 			if err := json.Unmarshal(v, u); err != nil {
-				Log.Warning("skipping unparseable user %s: %q", string(k), string(v))
+				Log.Warning("skipping malformed user %s: %q", string(k), string(v))
 				return nil
 			}
 			if u.RefreshSecret == "" {
@@ -143,44 +148,74 @@ func GetUsers(db *bbolt.DB) []*User {
 	return users
 }
 
-func (u *User) SaveRefreshToken(db *bbolt.DB, nuser *nokiahealth.User) {
-	if nuser.OauthToken.RefreshToken == u.RefreshSecret {
+func (u *User) SaveRefreshToken(db *bbolt.DB, nokiaUser *nokiahealth.User) {
+	if nokiaUser.OauthToken.RefreshToken == u.RefreshSecret {
 		log.Debugf("user %q refresh token unchanged", u.Username)
 		return
 	}
 
 	log.Debugf("saving updated refresh secret for user %q", u.Username)
-	u.RefreshSecret = nuser.OauthToken.RefreshToken
+	u.RefreshSecret = nokiaUser.OauthToken.RefreshToken
 	if err := u.Save(db); err != nil {
 		log.Errorf("saving user due to refresh token update: %v", err)
 	}
 }
 
-func (u *User) GetWeights(db *bbolt.DB, withings *nokiahealth.Client) ([]nokiahealth.Weight, error) {
-	return u.GetWeightsSince(db, withings, time.Now().AddDate(0, 0, -37))
-}
+func (u *User) GetWeights(db *bbolt.DB, withings *nokiahealth.Client,
+	from time.Time, to time.Time) error {
+	nokiaUser, err := u.NokiaUser(withings)
 
-func (u *User) GetWeightsSince(db *bbolt.DB, withings *nokiahealth.Client, since time.Time) ([]nokiahealth.Weight,
-	error) {
-	nuser, err := u.NokiaUser(db, withings)
-	if err != nil {
-		return nil, err
+	var measuresResp nokiahealth.BodyMeasuresResp
+
+	if err == nil {
+		measuresResp, err = nokiaUser.GetBodyMeasures(&nokiahealth.BodyMeasuresQueryParams{
+			StartDate: &from,
+			EndDate:   &to})
+		u.SaveRefreshToken(db, nokiaUser)
 	}
 
-	measureResp, err := nuser.GetBodyMeasures(&nokiahealth.BodyMeasuresQueryParams{StartDate: &since})
-	u.SaveRefreshToken(db, nuser)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	measures := measureResp.ParseData()
+	measures := measuresResp.ParseData()
 
-	return measures.Weights, nil
+	u.WeightsMu.Lock()
+	defer u.WeightsMu.Unlock()
+
+	for _, weight := range measures.Weights {
+		u.Weights = append(u.Weights, Weight{
+			Date: weight.Date,
+			Kgs:  weight.Kgs,
+		})
+	}
+
+	sort.Slice(u.Weights, func(i, j int) bool {
+		return u.Weights[i].Date.Before(u.Weights[j].Date)
+	})
+
+	var prevWeight Weight
+	var deDuplicated []Weight
+	for _, weight := range u.Weights {
+		if weight != prevWeight {
+			deDuplicated = append(deDuplicated, weight)
+		}
+		prevWeight = weight
+	}
+	u.Weights = deDuplicated
+	if len(u.Weights) > 0 {
+		u.LastWeight = u.Weights[len(u.Weights)-1].Date
+	}
+
+	return u.Save(db)
 }
 
 // MovingAverageWeight calculates the moving average of the user's weight. `days` specifies the size of the window, and
 // `shift` specifies how many days in the past the window should be moved. An error will be returned if there are not
 // enough samples.
-func (u User) MovingAverageWeight(days int, shift int) (float64, error) {
+func (u *User) MovingAverageWeight(days int, shift int) (float64, error) {
+	u.WeightsMu.RLock()
+	defer u.WeightsMu.RUnlock()
+
 	var samples []float64
 	for cursor := 0; cursor < days; cursor++ {
 		var daySamples []float64
@@ -210,13 +245,13 @@ func (u User) MovingAverageWeight(days int, shift int) (float64, error) {
 	return 0, errors.New("insufficient samples")
 }
 
-func (u User) sendSms(twilio *Twilio, message string) error {
+func (u *User) sendSms(twilio *Twilio, message string) error {
 	if u.Phone == "" {
 		return fmt.Errorf("user %q has no registered phone, cannot toast", u.Username)
 	}
 
 	if twilio == nil {
-		return errors.New("twilio mis- or unconfigured, cannot toast")
+		return errors.New("twilio mis- or un-configured, cannot toast")
 	}
 
 	if err := twilio.SendSms(u.Phone, message); err != nil {
@@ -229,7 +264,7 @@ func (u User) sendSms(twilio *Twilio, message string) error {
 var InsufficientData = errors.New("insufficient data")
 var Unwarranted = errors.New("unwarranted")
 
-func (u User) toastN(days int, twilio *Twilio, encourage bool) error {
+func (u *User) toastN(days int, twilio *Twilio, encourage bool) error {
 	current, err := u.MovingAverageWeight(days, 0)
 	if err != nil {
 		return InsufficientData
@@ -285,7 +320,10 @@ func (u User) toastN(days int, twilio *Twilio, encourage bool) error {
 	return nil
 }
 
-func (u User) Toast(twilio *Twilio) {
+func (u *User) Toast(twilio *Twilio) {
+	u.WeightsMu.RLock()
+	defer u.WeightsMu.RUnlock()
+
 	if len(u.Weights) == 0 {
 		log.Info("no weights logged for %s, cannot toast", u.Username)
 		return
@@ -316,6 +354,9 @@ func (u User) Toast(twilio *Twilio) {
 }
 
 func (u *User) Summary(twilio *Twilio, db *bbolt.DB, force bool) {
+	u.WeightsMu.RLock()
+	defer u.WeightsMu.RUnlock()
+
 	userTz := u.Timezone()
 	// Weekly summaries only on Sunday
 	if !force && time.Now().In(userTz).Weekday() != time.Sunday {
@@ -381,7 +422,7 @@ func (u *User) Summary(twilio *Twilio, db *bbolt.DB, force bool) {
 	}
 }
 
-func (u User) FormatKg(kgs float64) string {
+func (u *User) FormatKg(kgs float64) string {
 	if u.Kgs {
 		return fmt.Sprintf("%0.1f", kgs)
 	} else {
@@ -389,14 +430,14 @@ func (u User) FormatKg(kgs float64) string {
 	}
 }
 
-func (u User) Unit() string {
+func (u *User) Unit() string {
 	if u.Kgs {
 		return "kg"
 	}
 	return "lb"
 }
 
-func (u User) Timezone() *time.Location {
+func (u *User) Timezone() *time.Location {
 	if u.TimezoneName == "" {
 		u.TimezoneName = "America/Los_Angeles"
 	}
