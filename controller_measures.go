@@ -12,7 +12,7 @@ import (
 	"go.etcd.io/bbolt"
 )
 
-func MeasuresHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
+func MeasuresHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		u, err := models.LoadUserRequest(db, req)
 		if err != nil {
@@ -21,14 +21,9 @@ func MeasuresHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.Respo
 
 		}
 
-		weights, err := u.GetWeights(db, withings)
-		if err != nil {
-			Bail(rw, req, err, http.StatusInternalServerError)
-			return
-		}
-		for _, w := range weights {
+		for _, w := range u.Weights {
 			if w.Date.Before(time.Now().Add(-14 * 24 * time.Hour)) {
-				return
+				continue
 			}
 			if _, err := fmt.Fprintln(rw, w.Date, " ", u.FormatKg(w.Kgs)); err != nil {
 				Log.Errorf("writing output to user: %s", err)

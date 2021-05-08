@@ -114,27 +114,34 @@ func main() {
 
 	cbUrl := callbackUrl(*callbackProto, *callbackDomain, *callbackPort, "callback")
 	Log.Infof("using callback URL %q", cbUrl)
-	client := new(nokiahealth.Client)
-	*client = nokiahealth.NewClient(*consumerKey, *consumerSecret, cbUrl)
+	withingsClient := new(nokiahealth.Client)
+	*withingsClient = nokiahealth.NewClient(*consumerKey, *consumerSecret, cbUrl)
 
 	go func() {
 		for {
-			ScanMeasures(db, client, twilio)
+			ScanMeasures(db, withingsClient, twilio)
 			time.Sleep(time.Minute)
 		}
 	}()
+
+	withings := WithingsClient{
+		Db:       db,
+		Withings: withingsClient,
+	}
 
 	sessionizer := http.NewServeMux()
 	sessionizer.HandleFunc("/", models.WithSession(db, http.DefaultServeMux.ServeHTTP))
 	sessionizer.HandleFunc("/login", models.WithNewSession(db, RequireNotAuth(db, LoginHandler(db))))
 
-	http.HandleFunc("/", RequireAuth(db, IndexHandler(db, client)))
-	http.HandleFunc("/callback", RequireAuth(db, WithingsOauthHandler(db, client)))
+	http.HandleFunc("/", RequireAuth(db, IndexHandler(db, withingsClient)))
+
+	http.HandleFunc("/withings/begin", RequireAuth(db, withings.Begin))
+	http.HandleFunc("/callback", RequireAuth(db, withings.Complete))
+
 	http.HandleFunc("/signup", RequireNotAuth(db, SignupHandler(db)))
 	http.HandleFunc("/logout", RequireAuth(db, LogoutHandler(db)))
-	http.HandleFunc("/measures", RequireAuth(db, RequireLink(db, MeasuresHandler(db, client))))
+	http.HandleFunc("/measures", RequireAuth(db, MeasuresHandler(db)))
 
-	http.HandleFunc("/reauth", RequireAuth(db, RequireLink(db, WithingsReauthHandler(db))))
 	http.HandleFunc("/phone", RequireAuth(db, PhoneHandler(db)))
 	http.HandleFunc("/kgs", RequireAuth(db, KgsHandler(db)))
 	http.HandleFunc("/summary", RequireAuth(db, RequireLink(db, SummaryHandler(db, twilio))))

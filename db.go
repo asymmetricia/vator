@@ -8,6 +8,8 @@ import (
 	"go.etcd.io/bbolt"
 )
 
+const StatesBucket = "states"
+
 func ConsumeState(db *bbolt.DB, state string) error {
 	return db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(StatesBucket))

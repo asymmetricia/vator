@@ -16,18 +16,15 @@ func IndexHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.Response
 			Bail(rw, req, fmt.Errorf("should be logged in, but: %s", err), http.StatusInternalServerError)
 			return
 		}
-		if user.RefreshSecret == "" {
-			WithingsBeginOauth(db, withings, rw, req)
-		} else {
-			ctx, err := notifications(db, req)
-			if err != nil {
-				Bail(rw, req, err, http.StatusInternalServerError)
-				return
-			}
-			ctx.Phone = user.Phone
-			ctx.Kgs = user.Kgs
 
-			TemplateGet(rw, req, "index.tmpl", ctx)
+		ctx, err := notifications(db, req)
+		if err != nil {
+			Bail(rw, req, err, http.StatusInternalServerError)
+			return
 		}
+		ctx.Phone = user.Phone
+		ctx.Kgs = user.Kgs
+
+		TemplateGet(rw, req, "index.tmpl", ctx)
 	}
 }

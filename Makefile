@@ -40,3 +40,7 @@ tail:
 	ssh admin@mapbot.cernu.us journalctl -u vator-dev -f
 tail-prod:
 	ssh admin@mapbot.cernu.us journalctl -u vator -f
+
+reset-dev:
+	ssh admin@mapbot.cernu.us sudo rm -f /opt/vator-dev/vator.db
+	ssh admin@mapbot.cernu.us sudo systemctl restart vator-dev

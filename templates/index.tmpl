@@ -2,7 +2,13 @@
 {{template "error.tmpl" .}}
 {{template "toast.tmpl" .}}
 <ul>
-    <li>Withings: Linked <a href="/reauth">[reauthenticate]</a></li>
+    <li>Withings:
+        {{if .WithingsLink}}
+            <a href="/withings/begin">Link to Withings</a>
+        {{else}}
+            Linked <a href="/withings/begin">[reauthenticate]</a>
+        {{end}}
+    </li>
 </ul>
 &nbsp;<br/>
 Phone Number:
