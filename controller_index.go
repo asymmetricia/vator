@@ -24,10 +24,8 @@ func IndexHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.Response
 				Bail(rw, req, err, http.StatusInternalServerError)
 				return
 			}
-			ctx["phone"] = user.Phone
-			if user.Kgs {
-				ctx["kgs"] = "true"
-			}
+			ctx.Phone = user.Phone
+			ctx.Kgs = user.Kgs
 
 			TemplateGet(rw, req, indexTemplate, ctx)
 		}

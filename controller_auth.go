@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cbroglie/mustache"
 	. "github.com/pdbogen/vator/log"
 	"github.com/pdbogen/vator/models"
 	"go.etcd.io/bbolt"
@@ -57,20 +56,20 @@ func SignupHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func notifications(db *bbolt.DB, req *http.Request) (map[string]string, error) {
-	ctx := map[string]string{}
-	for _, key := range []string{"error", "toast"} {
+func notifications(db *bbolt.DB, req *http.Request) (TemplateContext, error) {
+	ctx := TemplateContext{}
+	for key, dest := range map[string]*string{"error": &ctx.Error, "toast": &ctx.Toast} {
 		value, err := models.SessionGet(db, req, key)
 		if err == models.KeyDoesNotExist {
 			err = nil
 		}
 		if err != nil {
-			return nil, fmt.Errorf("getting %s msg from session: %s", key, err)
+			return TemplateContext{}, fmt.Errorf("getting %s msg from session: %s", key, err)
 		}
-		ctx[key] = value
+		*dest = value
 		err = models.SessionSet(db, req, key, "")
 		if err != nil {
-			return nil, fmt.Errorf("clearing %smsg from session: %s", key, err)
+			return TemplateContext{}, fmt.Errorf("clearing %s msg from session: %s", key, err)
 		}
 	}
 	return ctx, nil
@@ -170,15 +169,13 @@ func StaticGet(rw http.ResponseWriter, _ *http.Request, content string) {
 	fmt.Fprint(rw, content)
 }
 
-func TemplateGet(rw http.ResponseWriter, _ *http.Request, template string, context ...interface{}) {
-	out, err := mustache.RenderPartials(template, partials, context...)
+func TemplateGet(rw http.ResponseWriter, _ *http.Request, template string, ctx TemplateContext) {
+	err := templates.ExecuteTemplate(rw, template, ctx)
 	if err != nil {
 		Log.Error("error rendering template: %s", err)
 		http.Error(rw, "Very sorry; something went wrong.", http.StatusInternalServerError)
 		return
 	}
-	rw.Header().Add("content-type", "text/html; charset=utf-8")
-	fmt.Fprintf(rw, out)
 }
 
 func LogoutHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
