@@ -20,7 +20,7 @@ func MeasuresHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 
 		}
 
-		u.WeightsMu.RLocker()
+		u.WeightsMu.RLock()
 		defer u.WeightsMu.RUnlock()
 		for _, w := range u.Weights {
 			if w.Date.Before(time.Now().Add(-14 * 24 * time.Hour)) {
