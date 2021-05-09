@@ -15,6 +15,7 @@ import (
 func Graph(db *bbolt.DB) func(rw http.ResponseWriter, req *http.Request) {
 	return RequireForm([]string{"user"}, func(rw http.ResponseWriter, req *http.Request) {
 		TemplateGet(rw, req, "graph.tmpl", TemplateContext{
+			Page: "graph",
 			User: req.Form.Get("user"),
 		})
 	})
@@ -38,6 +39,18 @@ func Data(db *bbolt.DB) func(rw http.ResponseWriter, req *http.Request) {
 		var user *models.User
 		if err == nil {
 			user, err = models.LoadUser(db, req.Form.Get("user"))
+		}
+
+		if err == nil && !user.Share {
+			var currentUser string
+			currentUser, err = models.SessionGet(db, req, "user")
+			if err != nil {
+				err = fmt.Errorf("user %q is not shared, and request is "+
+					"unauthenticated: %w", user.Username, err)
+			} else if user.Username != currentUser {
+				err = fmt.Errorf("user %q is not shared, and does not belong "+
+					"to %q", user.Username, currentUser)
+			}
 		}
 
 		if err != nil {

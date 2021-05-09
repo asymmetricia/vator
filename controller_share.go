@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func KgsHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
+func ShareHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		user, err := models.LoadUserRequest(db, req)
 		if err != nil {
@@ -20,7 +20,7 @@ func KgsHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		user.Kgs = !user.Kgs
+		user.Share = !user.Share
 		if err := user.Save(db); err != nil {
 			Bail(rw, req, err, http.StatusInternalServerError)
 			return

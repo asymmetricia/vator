@@ -24,7 +24,11 @@ func IndexHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.Response
 		}
 		ctx.Phone = user.Phone
 		ctx.Kgs = user.Kgs
+		ctx.Share = user.Share
 		ctx.Withings = user.RefreshSecret != ""
+
+		ctx.Page = "index"
+		ctx.User = user.Username
 
 		TemplateGet(rw, req, "index.tmpl", ctx)
 	}

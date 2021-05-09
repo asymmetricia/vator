@@ -13,7 +13,9 @@ type TemplateContext struct {
 
 	Withings bool
 
-	User string
+	User  string
+	Page  string
+	Share bool
 }
 
 //go:embed templates/*

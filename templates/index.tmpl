@@ -1,25 +1,58 @@
 {{template "preamble.tmpl"}}
-{{template "error.tmpl" .}}
-{{template "toast.tmpl" .}}
-<ul>
-    <li>Withings:
+</head>
+<body>
+{{template "navbar.tmpl" .}}
+<div class="container">
+    {{template "error.tmpl" .}}
+    {{template "toast.tmpl" .}}
+    <div class="input-group mb-3 mt-3">
+        <span class="input-group-text">Withings</span>
         {{if .Withings}}
-            Linked <a href="/withings/begin">[reauthenticate]</a>
+            <span class="input-group-text">Linked</span>
+            <a href="/withings/begin" class="form-control btn btn-outline-secondary">Re-Authenticate</a>
         {{else}}
-            <a href="/withings/begin">Link to Withings</a>
+            <span class="input-group-text">Unlinked</span>
+            <a class="form-control btn btn-primary" href="/withings/begin">Link to Withings</a>
         {{end}}
-    </li>
-</ul>
-&nbsp;<br/>
-Phone Number:
-<form action="/phone" method="POST">
-    <input type="text" name="phone" value="{{.Phone}}" placeholder="123 456 7890"/>
-    <input type="submit" value="Save"/>
-</form>
-<form id="kgs" action="/kgs" method="POST">
-    Use Kilograms: <input type="checkbox" name="kgs" {{if .Kgs}}checked{{end}}
-                          onchange="document.getElementById('kgs').submit();"/>
-</form>
-Maybe you'd like to <a href='/measures'>view your recent measurements</a>?'<br/>
-Or trigger a <a href='/summary'>Weekly Summary</a>?
+    </div>
+    <form action="/phone" method="POST">
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+            <input class="form-control" name="phone" placeholder="123 456 7890" type="tel" value="{{.Phone}}"/>
+            <input class="btn btn-primary" type="submit" value="Save"/>
+        </div>
+        <div class="form-text mb-3">Provide a mobile phone number to receive encouraging text messages.</div>
+    </form>
+    <form id="kgs" action="/kgs" method="POST">
+        <div class="input-group mb-3">
+            <span class="input-group-text">Use Kilograms: </span>
+            <span class="form-control pt-0 pb-0" onclick="document.getElementById('kgs').submit();">
+                {{if .Kgs}}
+                    <i class="bi bi-toggle-on text-success" style="font-size: 2rem;"></i>
+                {{else}}
+                    <i class="bi bi-toggle-off text-danger" style="font-size: 2rem;"></i>
+                {{end}}
+            </span>
+        </div>
+    </form>
+    <form id="share" action="/share" method="POST">
+        <div class="input-group">
+            <span class="input-group-text">Share Graph: </span>
+            <span class="form-control pt-0 pb-0" onclick="document.getElementById('share').submit();">
+                {{if .Share}}
+                    <i class="bi bi-toggle-on text-success" style="font-size: 2rem;"></i>
+                {{else}}
+                    <i class="bi bi-toggle-off text-danger" style="font-size: 2rem;"></i>
+                {{end}}
+            </span>
+        </div>
+        <div class="form-text mb-3">If sharing is turned on, anyone can see your graph.</div>
+    </form>
+    <div>
+        Maybe you'd like to <a href='/measures'>view your recent measurements</a>?'
+    </div>
+    <div>
+        Or trigger a <a href='/summary'>Weekly Summary</a>?
+    </div>
+</div>
 {{template "postamble.tmpl"}}

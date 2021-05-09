@@ -152,6 +152,7 @@ func main() {
 
 	http.HandleFunc("/phone", RequireAuth(db, PhoneHandler(db)))
 	http.HandleFunc("/kgs", RequireAuth(db, KgsHandler(db)))
+	http.HandleFunc("/share", RequireAuth(db, ShareHandler(db)))
 	http.HandleFunc("/summary", RequireAuth(db, RequireLink(db, SummaryHandler(db, twilio))))
 
 	http.Handle("/static/", http.FileServer(http.FS(static)))

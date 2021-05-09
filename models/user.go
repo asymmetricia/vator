@@ -46,6 +46,7 @@ type User struct {
 	Kgs          bool
 	LastSummary  time.Time
 	TimezoneName string
+	Share        bool
 }
 
 type Weight struct {

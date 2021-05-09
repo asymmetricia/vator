@@ -25,6 +25,7 @@ func SignupHandlerGet(db *bbolt.DB, rw http.ResponseWriter, req *http.Request) {
 		Bail(rw, req, err, http.StatusInternalServerError)
 		return
 	}
+	notif.Page = "signup"
 	TemplateGet(rw, req, "signup.tmpl", notif)
 }
 

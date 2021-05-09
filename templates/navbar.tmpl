@@ -1,0 +1,31 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">
+            <i class="bi bi-hand-thumbs-up"></i>
+            Vator
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup"
+                aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+            <div class="navbar-nav me-auto">
+                <a class="nav-link{{if eq .Page "index"}} active" aria-current="page{{end}}" href="/">Home</a>
+                {{if .User}}
+                    <a class="nav-link{{if eq .Page "graph"}} active" aria-current="page{{end}}"
+                       href="/graph?user={{.User}}">Graph</a>
+                {{end}}
+            </div>
+            <div class="navbar-nav">
+                {{if .User}}
+                    <span class="navbar-text">{{.User}}</span>
+                    <a class="nav-link" href="/logout">Logout</a>
+                {{else}}
+                    <a class="nav-link{{if eq .Page "login"}} active" aria-current="page{{end}}" href="/login">Login</a>
+                    <a class="nav-link{{if eq .Page "signup"}} active" aria-current="page{{end}}" href="/signup">Sign
+                        Up</a>
+                {{end}}
+            </div>
+        </div>
+    </div>
+</nav>

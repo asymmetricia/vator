@@ -69,7 +69,7 @@ func LoginHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 		case "POST":
 			RequireForm([]string{"username", "password"}, LoginHandlerPost(db))(rw, req)
 		default:
-			TemplateGet(rw, req, "login.tmpl", TemplateContext{})
+			TemplateGet(rw, req, "login.tmpl", TemplateContext{Page: "login"})
 		}
 	}
 }
@@ -100,11 +100,6 @@ func LoginHandlerPost(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func StaticGet(rw http.ResponseWriter, _ *http.Request, content string) {
-	rw.Header().Add("content-type", "text/html; charset=utf-8")
-	fmt.Fprint(rw, content)
-}
-
 func TemplateGet(rw http.ResponseWriter, _ *http.Request, template string, ctx TemplateContext) {
 	err := templates.ExecuteTemplate(rw, template, ctx)
 	if err != nil {
@@ -122,6 +117,7 @@ func LogoutHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 			http.Error(rw, "Very sorry; something went wrong.", http.StatusInternalServerError)
 			return
 		}
+
 		http.Redirect(rw, req, "/login", http.StatusFound)
 	}
 }
