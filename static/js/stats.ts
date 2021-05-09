@@ -9,80 +9,65 @@ export class DataSet {
         }
     }
 
-    ByDay(): Map<Date, number> {
-        let ret = new Map<Date, number>()
-        let points = new Map<string, Array<number>>()
-        this.data.forEach(point => {
-            let d = new Date(
-                point.date.getUTCFullYear(),
-                point.date.getUTCMonth(),
-                point.date.getUTCDay()
-            ).toJSON()
-            let pt = points.get(d)
-            if (!pt) {
-                pt = new Array<number>()
-            }
-            points.set(d, pt.concat(point.value))
-        })
-
-        points.forEach((vs, d) => {
-            let sum = 0
-            vs.forEach(v => sum += v)
-            ret.set(new Date(d), sum / vs.length)
-        })
-
-        return ret
-    }
-
-    MovingAverage(days: number, xFactor?: number): DataSet {
-        const ret = new DataSet()
-        if (xFactor == null) {
-            xFactor = Math.floor(days * 3 / 4)
-        }
-
-        const data = new Map<string, number>()
-        this.ByDay().forEach((value, key) =>
-            data.set(key.toJSON(), value)
-        )
-        const keys = Array.from(data.keys())
-        const begin: Date = new Date(keys[0])
-        const end: Date = new Date(keys[keys.length - 1])
-        for (let date = new Date(begin); date <= end; date.setDate(date.getDate() + 1)) {
-            let sum: number = 0, count: number = 0
-            for (let j = 0; j < days; j++) {
-                const cursor = new Date(date)
-                cursor.setDate(cursor.getDate() - j)
-                const d = data.get(cursor.toJSON())
-                if (d !== undefined) {
-                    sum += d
-                    count++
-                }
-            }
-            if (count >= xFactor) {
-                ret.data.push({date: date, value: sum / count})
-            }
-        }
-
-        return ret
-    }
-
-    Points(): Array<Point> {
+    Points(retriever: ((dp: DataPoint) => number), includeZero?: boolean): Array<Point> {
         const ret = new Array<Point>()
 
         this.data.forEach(value => {
-            ret.push({x: value.date.valueOf(), y: value.value})
+            const v = retriever(value)
+            if (v == 0 && !includeZero) {
+                return
+            }
+            ret.push({x: value.date.valueOf(), y: v})
         })
 
         return ret
     }
+
+    ValueAt(retriever: ((dp: DataPoint) => number), x: Date): number {
+        let left: DataPoint | null = null
+        let right: DataPoint | null = null
+
+        for (const dp of this.data) {
+            const v = retriever(dp)
+            if (v == 0) continue
+
+            if (dp.date <= x && (left === null || dp.date > left.date)) {
+                left = dp
+            }
+
+            if (dp.date >= x && (right === null || dp.date < right.date)) {
+                right = dp
+            }
+        }
+
+        if (left === null) {
+            return 0
+        }
+        if (right === null) {
+            return 0
+        }
+
+        // consider
+        // (1,1)  ... (5,?) ... (10,10)
+        // we know 2/2, 5/5, etc.
+
+        const rv = retriever(right)
+        const lv = retriever(left)
+        const dy = rv - lv
+        const dx = right.date.valueOf() - left.date.valueOf()
+
+        return lv + (x.valueOf() - left.date.valueOf()) / dx * dy
+    }
 }
 
-interface Point {
+export interface Point {
     x: number
     y: number
 }
 
 export interface DataPoint {
     date: Date
-    value: number
+    day: number
+    fiveDay: number
+    thirtyDay: number
 }

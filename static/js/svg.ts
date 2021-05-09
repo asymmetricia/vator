@@ -1,22 +1,22 @@
-export function TextElem(x: number, y: number, text: string): SVGElement {
+export function TextElem(x: string, y:string, text: string): SVGTextElement {
     const elem = document.createElementNS("http://www.w3.org/2000/svg", "text")
-    elem.setAttribute("x", x.toString())
-    elem.setAttribute("y", y.toString())
+    elem.setAttribute("x", x)
+    elem.setAttribute("y", y)
     elem.innerHTML = text
     return elem
 }
 
-export function FillElem(color: string, e: SVGElement): SVGElement {
+export function Fill<U extends SVGElement>(color: string, e: U): U {
     e.setAttribute("fill", color)
     return e
 }
 
-export function StrokeElem(color: string, e: SVGElement): SVGElement {
+export function Stroke<U extends SVGElement>(color: string, e: U): U {
     e.setAttribute("stroke", color)
     return e
 }
 
-export function LineElem(x1: number, y1: number, x2: number, y2: number): SVGElement {
+export function Line(x1: number, y1: number, x2: number, y2: number): SVGElement {
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line")
     line.setAttribute("x1", x1.toString())
     line.setAttribute("x2", x2.toString())
@@ -25,8 +25,10 @@ export function LineElem(x1: number, y1: number, x2: number, y2: number): SVGEle
     return line
 }
 
-export function CircleElem(cx: number, cy: number, r: number): SVGElement {
-    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle")
+export function Circle(cx: number, cy: number, r: number): SVGCircleElement {
+    const circle = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "circle")
     circle.setAttribute("cx", cx.toString())
     circle.setAttribute("cy", cy.toString())
     circle.setAttribute("r", r.toString())
@@ -45,8 +47,10 @@ interface Point {
     y: number
 }
 
-export function PathElem(points: Array<Point>): SVGElement {
-    const pathElem = document.createElementNS("http://www.w3.org/2000/svg", "path")
+export function Path(points: Array<Point>): SVGPathElement {
+    const pathElem = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "path") as SVGPathElement
 
     let cmd = ""
     points.forEach(pt => {
@@ -63,4 +67,15 @@ export function PathElem(points: Array<Point>): SVGElement {
     pathElem.setAttribute("style", "stroke-width: 1px; stroke-linejoin: round;")
 
     return pathElem
+}
+
+export function Tspan(text: string): SVGElement {
+    const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan") as SVGTSpanElement
+    tspan.textContent = text
+    return tspan
+}
+
+export function Translate<U extends SVGElement>(e: U, x: number, y: number): U {
+    e.setAttribute("transform", `translate(${x} ${y})`)
+    return e
 }

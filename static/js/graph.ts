@@ -1,42 +1,8 @@
-import {CircleElem, FillElem, LineElem, PathElem, StrokeElem, TextElem, TitleElem} from './svg.js'
+import {Circle, Fill, Line, Path, Stroke, TextElem, TitleElem} from './svg.js'
 import {DataPoint, DataSet} from "./stats.js";
-
-class ChartArea {
-    width: number
-    height: number
-    paddingTop: number
-    paddingBottom: number
-    paddingLeft: number
-    paddingRight: number
-
-    constructor(
-        width: number,
-        height: number,
-        paddingTop: number,
-        paddingBottom: number,
-        paddingLeft: number,
-        paddingRight: number,
-    ) {
-        this.width = width
-        this.height = height
-        this.paddingTop = paddingTop
-        this.paddingBottom = paddingBottom
-        this.paddingLeft = paddingLeft
-        this.paddingRight = paddingRight
-    }
-
-    ScaleY(y: number, bounds: Bounds): number {
-        const frac = (y - bounds.minY) / (bounds.maxY - bounds.minY)
-        const scaled = (1 - frac) * (this.height - this.paddingTop - this.paddingBottom)
-        return this.paddingTop + scaled
-    }
-
-    ScaleX(x: number, bounds: Bounds): number {
-        const frac = (x - bounds.minX) / (bounds.maxX - bounds.minX)
-        const scaled = frac * (this.width - this.paddingLeft - this.paddingRight)
-        return this.paddingLeft + scaled
-    }
-}
+import {Bounds, ChartArea} from "./types.js";
+import {addCursor} from "./cursor.js";
+import {gold, plum} from "./colors.js";
 
 function updateChart(days?: number) {
     const container = document.getElementById("chart_container");
@@ -90,37 +56,47 @@ function updateChart(days?: number) {
 
     const useKg = new URLSearchParams(window.location.search).get('kg') == "true";
 
-    let data = fetch(path).then(response => {
-        if (!response.ok) {
-            throw new Error(`error fetching data; status: ${response.status}`);
-        }
-        return response.blob()
-    })
-        .then(blob => {
-            return blob.text()
+    fetch(path)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`error fetching data; status: ${response.status}`);
+            }
+            return response.blob()
         })
+        .then(blob => blob.text())
         .then(data => {
             const ds = new DataSet(JSON.parse(data).map(decodeWeight(useKg)))
-            applyData(svgElem, dimensions, ds)
+            if (ds.data.length == 0) {
+                noData(svgElem)
+            } else {
+                applyData(svgElem, dimensions, ds)
+            }
         })
 }
 
 interface Weight {
     Date: string
-    Kgs: number
+    Day: number
+    FiveDay: number
+    ThirtyDay: number
 }
 
 function decodeWeight(kg: boolean): ((w: Weight) => DataPoint) {
     return w => {
-        const dp = {
-            date: new Date(Date.parse(w.Date)),
-            value: w.Kgs
-        }
-        if (!kg) {
-            dp.value /= 0.45359237
+        const mul = kg ? 1 : 1 / 0.45359237
+        const dp: DataPoint = {
+            date: new Date(w.Date),
+            day: w.Day * mul,
+            fiveDay: w.FiveDay * mul,
+            thirtyDay: w.ThirtyDay * mul,
         }
         return dp
     }
+}
+
+function noData(svgElem: SVGElement) {
+    const text = TextElem("50%", "50%", "No data in range.")
+    svgElem.appendChild(text)
 }
 
 function applyData(svgElem: SVGElement, dimensions: ChartArea, data: DataSet) {
@@ -128,30 +104,38 @@ function applyData(svgElem: SVGElement, dimensions: ChartArea, data: DataSet) {
     drawGridLines(svgElem, dimensions, bounds)
 
     data.data.forEach(value => {
+        if (value.day == 0) {
+            return
+        }
         svgElem.appendChild(
-            FillElem("green",
+            Fill("green",
                 TitleElem(value.date.toDateString(),
-                    CircleElem(
+                    Circle(
                         dimensions.ScaleX(value.date.valueOf(), bounds),
-                        dimensions.ScaleY(value.value, bounds),
+                        dimensions.ScaleY(value.day, bounds),
                         2
                     ))))
     })
 
-    svgElem.appendChild(PathElem(data.MovingAverage(5).Points().map(value => {
-        console.log(value)
-        return {
-            x: dimensions.ScaleX(value.x, bounds),
-            y: dimensions.ScaleY(value.y, bounds)
-        }
-    })))
-}
+    const fivePath = Fill("none", Stroke(gold,
+        Path(data.Points(dp => dp.fiveDay).map(value => {
+            return {
+                x: dimensions.ScaleX(value.x, bounds),
+                y: dimensions.ScaleY(value.y, bounds)
+            }
+        }))))
+    svgElem.appendChild(fivePath)
 
-interface Bounds {
-    minX: number;
-    maxX: number;
-    minY: number;
-    maxY: number;
+    const thirtyPath = Fill("none", Stroke(plum,
+        Path(data.Points(dp => dp.thirtyDay).map(value => {
+            return {
+                x: dimensions.ScaleX(value.x, bounds),
+                y: dimensions.ScaleY(value.y, bounds)
+            }
+        }))))
+    svgElem.appendChild(thirtyPath)
+
+    addCursor(svgElem, data, dimensions, bounds)
 }
 
 function dataBounds(data: DataSet): Bounds {
@@ -162,18 +146,23 @@ function dataBounds(data: DataSet): Bounds {
         minY: Number.MAX_VALUE
     }
 
-    data.data.forEach((value: DataPoint) => {
-        if (value.date.valueOf() < ret.minX) {
-            ret.minX = value.date.valueOf()
+    data.data.forEach((dp: DataPoint) => {
+        if (dp.day == 0 && dp.fiveDay == 0 && dp.thirtyDay == 0) {
+            return
         }
-        if (value.date.valueOf() > ret.maxX) {
-            ret.maxX = value.date.valueOf()
+
+        if (dp.date.valueOf() < ret.minX) {
+            ret.minX = dp.date.valueOf()
         }
-        if (value.value < ret.minY) {
-            ret.minY = value.value
+        if (dp.date.valueOf() > ret.maxX) {
+            ret.maxX = dp.date.valueOf()
         }
-        if (value.value > ret.maxY) {
-            ret.maxY = value.value
+        for (const v of [dp.day, dp.fiveDay, dp.thirtyDay]) {
+            if (v == 0) {
+                continue
+            }
+            ret.minY = Math.min(ret.minY, v)
+            ret.maxY = Math.max(ret.maxY, v)
         }
     })
 
@@ -193,9 +182,9 @@ function formatDate(d: Date, day: boolean): string {
 function drawGridLines(svg: SVGElement, dimensions: ChartArea, bounds: Bounds) {
     for (let yIdx: number = 0; yIdx < 12; yIdx++) {
         const y = bounds.minY + (bounds.maxY - bounds.minY) * yIdx / 12
-        const text = TextElem(0, dimensions.ScaleY(y, bounds), y.toFixed(1))
+        const text = TextElem("0", dimensions.ScaleY(y, bounds).toString(), y.toFixed(1))
         svg.appendChild(text)
-        svg.appendChild(FillElem("none", StrokeElem("#C0C0C0", LineElem(
+        svg.appendChild(Fill("none", Stroke("#C0C0C0", Line(
             dimensions.ScaleX(bounds.minX, bounds),
             dimensions.ScaleY(y, bounds),
             dimensions.ScaleX(bounds.maxX, bounds),
@@ -216,13 +205,13 @@ function drawGridLines(svg: SVGElement, dimensions: ChartArea, bounds: Bounds) {
         const sy = dimensions.height
 
         const text = formatDate(x, days <= 90)
-        const label = TextElem(sx, sy, text)
+        const label = TextElem(sx.toString(), sy.toString(), text)
         label.setAttribute("transform",
             `rotate(-90, ${sx.toString()}, ${sy.toString()})`)
         label.setAttribute("textLength", dimensions.paddingBottom.toString())
         svg.appendChild(label)
 
-        svg.appendChild(FillElem('none', StrokeElem('#F0F0F0', LineElem(
+        svg.appendChild(Fill('none', Stroke('#F0F0F0', Line(
             sx, dimensions.ScaleY(bounds.minY, bounds),
             sx, dimensions.ScaleY(bounds.maxY, bounds),
         ))))
@@ -241,3 +230,10 @@ function drawGridLines(svg: SVGElement, dimensions: ChartArea, bounds: Bounds) {
 
 document.addEventListener("DOMContentLoaded", () => updateChart())
 window.onresize = () => updateChart()
+
+for (const elem of document.getElementsByClassName("timeclick")) {
+    elem.addEventListener("click", () => {
+        updateChart(parseInt(elem.getAttribute("data-days") || "0"))
+        return false
+    })
+}

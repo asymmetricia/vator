@@ -346,7 +346,7 @@ func (u *User) Toast(twilio *Twilio) {
 		// send not enough data message
 		msg := notEnoughData[rand.Intn(len(notEnoughData))]
 		if err := u.sendSms(twilio, msg); err != nil {
-			log.Errorf("failed sending toast: %w", err)
+			log.Errorf("failed sending toast: %v", err)
 		}
 		return
 	}
@@ -382,14 +382,14 @@ func (u *User) Summary(twilio *Twilio, db *bbolt.DB, force bool) {
 		msg += fmt.Sprintf("\n%d-day Average: ", delta)
 		now, err := u.MovingAverageWeight(delta, 0)
 		if err != nil {
-			log.Errorf("calculating current %d-day moving average for %q: %w", delta, u.Username, err)
+			log.Errorf("calculating current %d-day moving average for %q: %v", delta, u.Username, err)
 			msg += "insufficient data :("
 			continue
 		}
 
 		then, err := u.MovingAverageWeight(delta, 7)
 		if err != nil {
-			log.Errorf("calculating 7-day-shifted %d-day moving average for %q: %w", delta, u.Username, err)
+			log.Errorf("calculating 7-day-shifted %d-day moving average for %q: %v", delta, u.Username, err)
 			msg += "insufficient data :("
 			continue
 		}
@@ -412,13 +412,13 @@ func (u *User) Summary(twilio *Twilio, db *bbolt.DB, force bool) {
 	msg += fmt.Sprintf("\n%d weigh-ins on record", weighs)
 
 	if err := u.sendSms(twilio, msg); err != nil {
-		log.Errorf("failed sending weekly summary: %w", err)
+		log.Errorf("failed sending weekly summary: %v", err)
 		return
 	}
 
 	u.LastSummary = time.Now()
 	if err := u.Save(db); err != nil {
-		log.Errorf("failed to update LastSummary date: %w", err)
+		log.Errorf("failed to update LastSummary date: %v", err)
 	}
 }
 
@@ -444,12 +444,12 @@ func (u *User) Timezone() *time.Location {
 
 	loc, err := time.LoadLocation(u.TimezoneName)
 	if err != nil {
-		log.Error("user %q has bad time zone %q: %w", u.TimezoneName, err)
+		log.Errorf("user %q has bad time zone %q: %v", u.TimezoneName, err)
 		loc, err = time.LoadLocation("America/Los_Angeles")
 	}
 
 	if err != nil {
-		log.Error("could not load tz America/Los_Angeles: %w", err)
+		log.Errorf("could not load tz America/Los_Angeles: %v", err)
 		return time.UTC
 	}
 
