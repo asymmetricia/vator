@@ -10,6 +10,10 @@ type TemplateContext struct {
 	Toast string
 	Phone string
 	Kgs   bool
+
+	Withings bool
+
+	User string
 }
 
 //go:embed templates/*

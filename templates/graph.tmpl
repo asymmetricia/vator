@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>vator</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <link rel="Stylesheet" type="text/css" href="static/css/graph.css"/>
+    {{/*    <script data-main="static/js/graph" src="static/js/require.js"></script>*/}}
+    <script src="static/js/graph.js" type="module"></script>
+</head>
+<body>
+<div class="container">
+    <div class="timenav">
+        <a href="#" onclick="updateChart(0); return false;">all time</a> |
+        <a href="#" onclick="updateChart(365); return false;">last year</a> |
+        <a href="#" onclick="updateChart(90); return false;">90 days</a> |
+        <a href="#" onclick="updateChart(30); return false;">30 days</a>
+        <br/>
+    </div>
+    <div id="chart_container"></div>
+</div>
+</body>
+</html>

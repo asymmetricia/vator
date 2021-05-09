@@ -32,8 +32,8 @@ push-prod: .push-prod
 	docker tag vator ${IMAGE_URL}
 	touch .docker-prod
 
-vator: ${shell find -name \*.go} ${shell find templates}
-	go fmt github.com/pdbogen/vator/...
+vator: ${shell find -name \*.go} ${shell find templates} ${shell find static/css} static/js/graph.js
+	#go fmt github.com/pdbogen/vator/...
 	go build -o vator
 
 tail:
@@ -44,3 +44,14 @@ tail-prod:
 reset-dev:
 	ssh admin@mapbot.cernu.us sudo rm -f /opt/vator-dev/vator.db
 	ssh admin@mapbot.cernu.us sudo systemctl restart vator-dev
+
+static/js/graph.js: static/js/graph.ts static/js/svg.ts
+	printf 'FROM node:16\nRUN npm install typescript -g\nRUN npm install ts-node -g' | docker build -t tsc -
+	docker run -it -v "$$PWD/static/js:/work" -w /work -u $$(id -u) tsc \
+		tsc -t es2015 -m commonjs graph.ts
+	docker run -it -v "$$PWD/static/js:/work" -w /work -u $$(id -u) tsc \
+		ts-node \
+			-O '{"target":"es2015"}' \
+			test.ts
+	docker run -it -v "$$PWD/static/js:/work" -w /work -u $$(id -u) tsc \
+		tsc -t es2015 -m es2015 graph.ts

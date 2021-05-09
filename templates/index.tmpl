@@ -3,10 +3,10 @@
 {{template "toast.tmpl" .}}
 <ul>
     <li>Withings:
-        {{if .WithingsLink}}
-            <a href="/withings/begin">Link to Withings</a>
-        {{else}}
+        {{if .Withings}}
             Linked <a href="/withings/begin">[reauthenticate]</a>
+        {{else}}
+            <a href="/withings/begin">Link to Withings</a>
         {{end}}
     </li>
 </ul>
