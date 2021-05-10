@@ -121,14 +121,11 @@ func main() {
 	minutely := time.NewTicker(time.Minute)
 	go func() {
 		for {
+			go func() {
+				time.Sleep(30 * time.Second)
+				BackfillMeasures(db, withingsClient)
+			}()
 			ScanMeasures(db, withingsClient, twilio)
-			<-minutely.C
-		}
-	}()
-	go func() {
-		for {
-			time.Sleep(30 * time.Second)
-			BackfillMeasures(db, withingsClient)
 			<-minutely.C
 		}
 	}()
