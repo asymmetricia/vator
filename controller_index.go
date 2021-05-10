@@ -13,7 +13,8 @@ func IndexHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.Response
 	return func(rw http.ResponseWriter, req *http.Request) {
 		user, err := models.LoadUserRequest(db, req)
 		if err != nil {
-			Bail(rw, req, fmt.Errorf("should be logged in, but: %s", err), http.StatusInternalServerError)
+			Bail(rw, req, fmt.Errorf("in IndexHandler: should be logged in, "+
+				"but: %s", err), http.StatusInternalServerError)
 			return
 		}
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -80,7 +81,7 @@ func LoginHandlerPost(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 			http.Error(rw, "The username or password you provided was invalid.", http.StatusBadRequest)
 		}
 		user, err := models.LoadUser(db, req.Form.Get("username"))
-		if err == models.UserNotFound {
+		if errors.Is(err, models.UserNotFound) {
 			invalid()
 			return
 		}

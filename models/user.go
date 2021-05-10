@@ -78,16 +78,16 @@ func LoadUser(db *bbolt.DB, username string) (*User, error) {
 	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte("users"))
 		if b == nil {
-			return UserNotFound
+			return fmt.Errorf("user %q: %w", username, UserNotFound)
 		}
 		u := b.Get([]byte(username))
 		if u == nil {
-			return UserNotFound
+			return fmt.Errorf("user %q: %w", username, UserNotFound)
 		}
 		user = &User{}
 		if err := json.Unmarshal(u, user); err != nil {
 			Log.Errorf("user record for %q (%q) corrupt: %s", username, string(u), err)
-			return UserNotFound
+			return fmt.Errorf("user %q: %w", username, UserNotFound)
 		}
 		return nil
 	})
@@ -144,9 +144,9 @@ func TidyUsers(db *bbolt.DB) {
 
 		for username, userJson := range users {
 			var user User
-			err := json.Unmarshal(b.Get(userJson), &user)
+			err := json.Unmarshal(userJson, &user)
 			if err != nil {
-				log.Warningf("corrupt user %q; deleting", username)
+				log.Warningf("corrupt user %q; deleting: %v", username, err)
 				b.Delete([]byte(username))
 				continue
 			}

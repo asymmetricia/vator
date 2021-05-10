@@ -35,7 +35,7 @@ func SignupHandlerPost(db *bbolt.DB) func(w http.ResponseWriter, r *http.Request
 		password := req.Form.Get("password")
 		confirm := req.Form.Get("confirm")
 		_, err := models.LoadUser(db, username)
-		if err != models.UserNotFound {
+		if !errors.Is(err, models.UserNotFound) {
 			err = errors.New("that username is taken; try again?")
 		} else {
 			err = nil
