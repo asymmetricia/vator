@@ -47,6 +47,10 @@ export class DataSet {
             return 0
         }
 
+        if (left == right) {
+            return retriever(left)
+        }
+
         // consider
         // (1,1)  ... (5,?) ... (10,10)
         // we know 2/2, 5/5, etc.
