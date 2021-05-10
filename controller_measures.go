@@ -47,7 +47,7 @@ func BackfillMeasures(db *bbolt.DB, withings *nokiahealth.Client) {
 		}
 
 		before := len(u.Weights)
-		bfFrom := u.BackFillDate.Add(-30 * 24 * time.Hour)
+		bfFrom := u.BackFillDate.Add(-365 * 24 * time.Hour)
 		bfTo := u.BackFillDate
 
 		err := u.GetWeights(db, withings, bfFrom, bfTo)
