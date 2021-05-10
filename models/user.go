@@ -373,8 +373,6 @@ func (u *User) toastN(days int, twilio *Twilio, encourage bool) error {
 }
 
 func (u *User) Toast(twilio *Twilio) {
-	return // shimmed
-
 	if len(u.Weights) == 0 {
 		log.Info("no weights logged for %s, cannot toast", u.Username)
 		return
