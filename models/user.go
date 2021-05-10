@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -35,7 +36,6 @@ type User struct {
 	LastWeight     time.Time
 	BackFillDate   time.Time
 	Weights        []Weight
-	WeightsMu      sync.RWMutex
 	Phone          string
 
 	OauthTime     time.Time
@@ -72,6 +72,8 @@ func LoadUserRequest(db *bbolt.DB, req *http.Request) (*User, error) {
 }
 
 func LoadUser(db *bbolt.DB, username string) (*User, error) {
+	username = strings.ToLower(username)
+
 	var user *User
 	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte("users"))
@@ -101,11 +103,16 @@ func (u *User) Save(db *bbolt.DB) error {
 		if err != nil {
 			return fmt.Errorf("opening users bucket: %s", err)
 		}
+		u.Username = strings.ToLower(u.Username)
 		user, err := json.Marshal(u)
 		if err != nil {
 			return fmt.Errorf("marshalling user into JSON: %s", err)
 		}
-		return b.Put([]byte(u.Username), user)
+		if err := b.Put([]byte(u.Username), user); err != nil {
+			return err
+		}
+		Log.Debugf("saved user %q w/ %d weights", u.Username, len(u.Weights))
+		return nil
 	})
 }
 
@@ -116,6 +123,43 @@ func (u *User) SetPassword(newPassword string) error {
 	}
 	u.HashedPassword = hash
 	return nil
+}
+
+func TidyUsers(db *bbolt.DB) {
+	err := db.Update(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte("users"))
+		if b == nil {
+			return nil
+		}
+
+		var users = map[string][]byte{}
+
+		err := b.ForEach(func(k, v []byte) error {
+			users[string(k)] = v
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("scanning users table: %v", err)
+		}
+
+		for username, userJson := range users {
+			var user User
+			err := json.Unmarshal(b.Get(userJson), &user)
+			if err != nil {
+				log.Warningf("corrupt user %q; deleting", username)
+				b.Delete([]byte(username))
+				continue
+			}
+
+			// do some tidying here if need be
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		Log.Errorf("during tidying: %v", err)
+	}
 }
 
 func GetUsers(db *bbolt.DB) []*User {
@@ -135,6 +179,7 @@ func GetUsers(db *bbolt.DB) []*User {
 				Log.Debugf("skipping unlinked user %q", string(k))
 				return nil
 			}
+			Log.Debugf("loaded %q w/ %d weights", u.Username, len(u.Weights))
 			users = append(users, u)
 			return nil
 		})
@@ -164,6 +209,10 @@ func (u *User) SaveRefreshToken(db *bbolt.DB, nokiaUser *nokiahealth.User) {
 
 func (u *User) GetWeights(db *bbolt.DB, withings *nokiahealth.Client,
 	from time.Time, to time.Time) error {
+
+	Log.Debugf("getting weights for %q from %s to %s", u.Username,
+		from, to)
+
 	nokiaUser, err := u.NokiaUser(withings)
 
 	var measuresResp nokiahealth.BodyMeasuresResp
@@ -180,8 +229,11 @@ func (u *User) GetWeights(db *bbolt.DB, withings *nokiahealth.Client,
 	}
 	measures := measuresResp.ParseData()
 
-	u.WeightsMu.Lock()
-	defer u.WeightsMu.Unlock()
+	Log.Debugf("%q: got %d weights", u.Username, len(measures.Weights))
+
+	if len(measures.Weights) == 0 {
+		return nil
+	}
 
 	for _, weight := range measures.Weights {
 		u.Weights = append(u.Weights, Weight{
@@ -197,15 +249,17 @@ func (u *User) GetWeights(db *bbolt.DB, withings *nokiahealth.Client,
 	var prevWeight Weight
 	var deDuplicated []Weight
 	for _, weight := range u.Weights {
-		if weight != prevWeight {
+		if weight.Kgs == prevWeight.Kgs && weight.Date.Equal(prevWeight.Date) {
+		} else {
 			deDuplicated = append(deDuplicated, weight)
 		}
 		prevWeight = weight
+		if weight.Date.After(u.LastWeight) {
+			u.LastWeight = weight.Date
+		}
 	}
+	Log.Debugf("%q: de-duplicated %d weights", u.Username, len(u.Weights)-len(deDuplicated))
 	u.Weights = deDuplicated
-	if len(u.Weights) > 0 {
-		u.LastWeight = u.Weights[len(u.Weights)-1].Date
-	}
 
 	return u.Save(db)
 }
@@ -214,9 +268,6 @@ func (u *User) GetWeights(db *bbolt.DB, withings *nokiahealth.Client,
 // `shift` specifies how many days in the past the window should be moved. An error will be returned if there are not
 // enough samples.
 func (u *User) MovingAverageWeight(days int, shift int) (float64, error) {
-	u.WeightsMu.RLock()
-	defer u.WeightsMu.RUnlock()
-
 	var samples []float64
 	for cursor := 0; cursor < days; cursor++ {
 		var daySamples []float64
@@ -322,8 +373,7 @@ func (u *User) toastN(days int, twilio *Twilio, encourage bool) error {
 }
 
 func (u *User) Toast(twilio *Twilio) {
-	u.WeightsMu.RLock()
-	defer u.WeightsMu.RUnlock()
+	return // shimmed
 
 	if len(u.Weights) == 0 {
 		log.Info("no weights logged for %s, cannot toast", u.Username)
@@ -355,9 +405,6 @@ func (u *User) Toast(twilio *Twilio) {
 }
 
 func (u *User) Summary(twilio *Twilio, db *bbolt.DB, force bool) {
-	u.WeightsMu.RLock()
-	defer u.WeightsMu.RUnlock()
-
 	userTz := u.Timezone()
 	// Weekly summaries only on Sunday
 	if !force && time.Now().In(userTz).Weekday() != time.Sunday {

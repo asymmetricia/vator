@@ -111,6 +111,7 @@ func main() {
 		Log.Fatalf("opening bolt db file %q: %s", *dbFile, err)
 	}
 	defer db.Close()
+	models.TidyUsers(db)
 
 	cbUrl := callbackUrl(*callbackProto, *callbackDomain, *callbackPort, "callback")
 	Log.Infof("using callback URL %q", cbUrl)

@@ -34,7 +34,7 @@ push-prod: .push-prod
 
 vator: ${shell find -name \*.go} ${shell find templates} ${shell find static/css} static/js/graph.js
 	#go fmt github.com/pdbogen/vator/...
-	go build -o vator
+	go build -race -o vator
 
 tail:
 	ssh admin@mapbot.cernu.us journalctl -u vator-dev -f

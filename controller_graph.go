@@ -79,7 +79,7 @@ func Data(db *bbolt.DB) func(rw http.ResponseWriter, req *http.Request) {
 
 			t := w.Date.Truncate(24 * time.Hour)
 
-			if first == (time.Time{}) || t.Before(first) {
+			if first.IsZero() || t.Before(first) {
 				first = t
 			}
 
@@ -92,7 +92,7 @@ func Data(db *bbolt.DB) func(rw http.ResponseWriter, req *http.Request) {
 
 		log.Log.Debugf("%d days to compute requested range", len(series))
 
-		if start == (time.Time{}) {
+		if start.IsZero() {
 			start = first
 		}
 
