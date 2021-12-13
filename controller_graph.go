@@ -147,7 +147,7 @@ func MovingAverage(t time.Time, data map[time.Time]*DataPoint, days int) float64
 		}
 	}
 
-	if len(samples) >= days*3/4 {
+	if len(samples) >= days*2/3 {
 		return Mean(samples)
 	}
 
