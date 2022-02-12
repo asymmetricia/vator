@@ -32,7 +32,7 @@ push-prod: .push-prod
 	docker tag vator ${IMAGE_URL}
 	touch .docker-prod
 
-vator: ${shell find -name \*.go} ${shell find templates} ${shell find static/css} static/js/graph.js
+vator: ${shell find -name \*.go} ${shell find templates} ${shell find static/css} static/js/graph.js go.mod go.sum
 	#go fmt github.com/asymmetricia/vator/...
 	CGO_ENABLED=0 go build -o vator
 

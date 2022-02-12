@@ -222,17 +222,29 @@ func GetUsers(db *bbolt.DB) []*User {
 }
 
 func (u *User) SaveOauthTokens(db *bbolt.DB, user *withings.User) {
-	if user.OauthToken.RefreshToken == u.RefreshSecret &&
-		user.OauthToken.AccessToken == u.AccessToken &&
-		user.OauthToken.Expiry == u.TokenExpiry {
-		log.Debugf("user %q oauth tokens unchanged", u.Username)
+	changed := false
+	if user.OauthToken.RefreshToken != u.RefreshSecret {
+		changed = true
+		u.RefreshSecret = user.OauthToken.RefreshToken
+		log.Debugf("user %q: refresh token changed", u.Username)
+	}
+	if user.OauthToken.AccessToken != u.AccessToken {
+		changed = true
+		u.AccessToken = user.OauthToken.AccessToken
+		log.Debugf("user %q: access token changed", u.Username)
+	}
+	if !user.OauthToken.Expiry.Equal(u.TokenExpiry) {
+		changed = true
+		u.TokenExpiry = user.OauthToken.Expiry
+		log.Debugf("user %q: token expiry changed to %s", u.Username, user.OauthToken.Expiry)
+	}
+
+	if !changed {
+		log.Debugf("user %q: oauth tokens unchanged", u.Username)
 		return
 	}
 
 	log.Debugf("saving updated refresh secret for user %q", u.Username)
-	u.RefreshSecret = user.OauthToken.RefreshToken
-	u.AccessToken = user.OauthToken.AccessToken
-	u.TokenExpiry = user.OauthToken.Expiry
 	if err := u.Save(db); err != nil {
 		log.Errorf("saving user due to refresh token update: %v", err)
 	}
