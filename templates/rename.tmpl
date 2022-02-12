@@ -1,0 +1,21 @@
+{{template "preamble.tmpl"}}
+</head>
+<body>
+{{template "navbar.tmpl" .}}
+<div class="container">
+    {{template "error.tmpl" .}}
+    {{template "toast.tmpl" .}}
+    <div>
+        New name? Great! Let's hear it!
+    </div>
+
+    <form action="/rename" method="post">
+        <div class="input-group">
+            <span class="input-group-text" id="basic-addon1"><i class="bi-person"></i></span>
+            <input class="form-control" type="text" name="new_name" id="username" placeholder="New Username"
+                   aria-label="Username">
+        </div>
+        <input class="btn btn-primary" type='submit' value='Update'>
+    </form>
+</div>
+{{template "postamble.tmpl"}}

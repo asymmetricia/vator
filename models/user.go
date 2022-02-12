@@ -115,6 +115,27 @@ func (u *User) Save(db *bbolt.DB) error {
 	})
 }
 
+func (u *User) Rename(db *bbolt.DB, newName string) error {
+	return db.Update(func(tx *bbolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists([]byte("users"))
+		if err != nil {
+			return fmt.Errorf("opening users bucket: %s", err)
+		}
+
+		deadName := strings.ToLower(u.Username)
+		u.Username = strings.ToLower(newName)
+		user, err := json.Marshal(u)
+		if err == nil {
+			err = b.Put([]byte(u.Username), user)
+		}
+		if err == nil {
+			err = b.Delete([]byte(deadName))
+		}
+		Log.Debugf("saved user %q w/ %d weights", u.Username, len(u.Weights))
+		return nil
+	})
+}
+
 func (u *User) SetPassword(newPassword string) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 11)
 	if err != nil {
