@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/asymmetricia/nokiahealth"
 	"github.com/asymmetricia/vator/models"
+	"github.com/asymmetricia/withings"
 	"go.etcd.io/bbolt"
 )
 
-func IndexHandler(db *bbolt.DB, withings *nokiahealth.Client) func(http.ResponseWriter, *http.Request) {
+func IndexHandler(db *bbolt.DB, withings *withings.Client) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		user, err := models.LoadUserRequest(db, req)
 		if err != nil {

@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/asymmetricia/nokiahealth"
 	. "github.com/asymmetricia/vator/log"
 	"github.com/asymmetricia/vator/models"
+	"github.com/asymmetricia/withings"
 	"go.etcd.io/bbolt"
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -115,8 +115,8 @@ func main() {
 
 	cbUrl := callbackUrl(*callbackProto, *callbackDomain, *callbackPort, "callback")
 	Log.Infof("using callback URL %q", cbUrl)
-	withingsClient := new(nokiahealth.Client)
-	*withingsClient = nokiahealth.NewClient(*consumerKey, *consumerSecret, cbUrl)
+	withingsClient := new(withings.Client)
+	*withingsClient = withings.NewClient(*consumerKey, *consumerSecret, cbUrl)
 
 	minutely := time.NewTicker(time.Minute)
 	go func() {

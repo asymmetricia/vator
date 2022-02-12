@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/asymmetricia/nokiahealth"
 	"github.com/asymmetricia/vator/models"
+	"github.com/asymmetricia/withings"
 	"go.etcd.io/bbolt"
 )
 
 type WithingsClient struct {
 	Db       *bbolt.DB
-	Withings *nokiahealth.Client
+	Withings *withings.Client
 }
 
 func (w *WithingsClient) Begin(rw http.ResponseWriter, req *http.Request) {

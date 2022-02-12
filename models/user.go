@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/asymmetricia/nokiahealth"
 	. "github.com/asymmetricia/vator/log"
+	"github.com/asymmetricia/withings"
 	"github.com/cbroglie/mustache"
 	errors2 "github.com/pkg/errors"
 	"go.etcd.io/bbolt"
@@ -55,7 +55,7 @@ type Weight struct {
 
 var UserNotFound = errors.New("user not found")
 
-func (u *User) NokiaUser(client *nokiahealth.Client) (*nokiahealth.User, error) {
+func (u *User) NokiaUser(client *withings.Client) (*withings.User, error) {
 	if u.RefreshSecret == "" {
 		return nil, errors.New("not linked")
 	}
@@ -167,7 +167,7 @@ func TidyUsers(db *bbolt.DB) {
 			err := json.Unmarshal(userJson, &user)
 			if err != nil {
 				log.Warningf("corrupt user %q; deleting: %v", username, err)
-				b.Delete([]byte(username))
+				_ = b.Delete([]byte(username))
 				continue
 			}
 
@@ -214,34 +214,34 @@ func GetUsers(db *bbolt.DB) []*User {
 	return users
 }
 
-func (u *User) SaveRefreshToken(db *bbolt.DB, nokiaUser *nokiahealth.User) {
-	if nokiaUser.RefreshToken == u.RefreshSecret {
+func (u *User) SaveRefreshToken(db *bbolt.DB, user *withings.User) {
+	if user.RefreshToken == u.RefreshSecret {
 		log.Debugf("user %q refresh token unchanged", u.Username)
 		return
 	}
 
 	log.Debugf("saving updated refresh secret for user %q", u.Username)
-	u.RefreshSecret = nokiaUser.RefreshToken
+	u.RefreshSecret = user.RefreshToken
 	if err := u.Save(db); err != nil {
 		log.Errorf("saving user due to refresh token update: %v", err)
 	}
 }
 
-func (u *User) GetWeights(db *bbolt.DB, withings *nokiahealth.Client,
+func (u *User) GetWeights(db *bbolt.DB, wtClient *withings.Client,
 	from time.Time, to time.Time) error {
 
 	Log.Debugf("getting weights for %q from %s to %s", u.Username,
 		from, to)
 
-	nokiaUser, err := u.NokiaUser(withings)
+	user, err := u.NokiaUser(wtClient)
 
-	var measuresResp nokiahealth.BodyMeasuresResp
+	var measuresResp withings.BodyMeasuresResp
 
 	if err == nil {
-		measuresResp, err = nokiaUser.GetBodyMeasures(&nokiahealth.BodyMeasuresQueryParams{
+		measuresResp, err = user.GetBodyMeasures(&withings.BodyMeasuresQueryParams{
 			StartDate: &from,
 			EndDate:   &to})
-		u.SaveRefreshToken(db, nokiaUser)
+		u.SaveRefreshToken(db, user)
 	}
 
 	if err != nil {

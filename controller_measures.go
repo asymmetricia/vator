@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/asymmetricia/nokiahealth"
 	. "github.com/asymmetricia/vator/log"
 	"github.com/asymmetricia/vator/models"
+	"github.com/asymmetricia/withings"
 	"go.etcd.io/bbolt"
 )
 
@@ -34,7 +34,7 @@ func MeasuresHandler(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 
 var minBackfill = time.Date(2008, time.January, 0, 0, 0, 0, 0, time.UTC)
 
-func BackfillMeasures(db *bbolt.DB, withings *nokiahealth.Client) {
+func BackfillMeasures(db *bbolt.DB, withings *withings.Client) {
 	for _, u := range models.GetUsers(db) {
 		if u.BackFillDate.IsZero() {
 			Log.Debugf("initializing backfill for %q", u.Username)
@@ -69,7 +69,7 @@ func BackfillMeasures(db *bbolt.DB, withings *nokiahealth.Client) {
 	}
 }
 
-func ScanMeasures(db *bbolt.DB, withings *nokiahealth.Client, twilio *models.Twilio) {
+func ScanMeasures(db *bbolt.DB, withings *withings.Client, twilio *models.Twilio) {
 	for _, u := range models.GetUsers(db) {
 		if u.LastWeight.IsZero() {
 			u.LastWeight = time.Now().AddDate(0, 0, -37)
