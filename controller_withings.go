@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/jrmycanady/nokiahealth"
-	"github.com/pdbogen/vator/models"
+	"github.com/asymmetricia/nokiahealth"
+	"github.com/asymmetricia/vator/models"
 	"go.etcd.io/bbolt"
 )
 
@@ -50,7 +50,11 @@ func (w *WithingsClient) Complete(rw http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		token := withingsUser.OauthToken
+		token, err := withingsUser.Token()
+		if err != nil {
+			Bail(rw, req, fmt.Errorf("getting token for user: %w", err), http.StatusInternalServerError)
+			return
+		}
 
 		user.AccessToken = token.AccessToken
 		user.RefreshSecret = token.RefreshToken

@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/asymmetricia/nokiahealth"
+	. "github.com/asymmetricia/vator/log"
 	"github.com/cbroglie/mustache"
-	"github.com/jrmycanady/nokiahealth"
-	. "github.com/pdbogen/vator/log"
 	errors2 "github.com/pkg/errors"
 	"go.etcd.io/bbolt"
 	"golang.org/x/crypto/bcrypt"
@@ -38,7 +38,6 @@ type User struct {
 	Weights        []Weight
 	Phone          string
 
-	OauthTime     time.Time
 	AccessToken   string
 	RefreshSecret string
 	TokenExpiry   time.Time
@@ -61,7 +60,7 @@ func (u *User) NokiaUser(client *nokiahealth.Client) (*nokiahealth.User, error) 
 		return nil, errors.New("not linked")
 	}
 
-	return client.NewUserFromRefreshToken(context.Background(), u.RefreshSecret), nil
+	return client.NewUserFromRefreshToken(context.Background(), u.RefreshSecret)
 }
 
 func LoadUserRequest(db *bbolt.DB, req *http.Request) (*User, error) {
@@ -195,13 +194,13 @@ func GetUsers(db *bbolt.DB) []*User {
 }
 
 func (u *User) SaveRefreshToken(db *bbolt.DB, nokiaUser *nokiahealth.User) {
-	if nokiaUser.OauthToken.RefreshToken == u.RefreshSecret {
+	if nokiaUser.RefreshToken == u.RefreshSecret {
 		log.Debugf("user %q refresh token unchanged", u.Username)
 		return
 	}
 
 	log.Debugf("saving updated refresh secret for user %q", u.Username)
-	u.RefreshSecret = nokiaUser.OauthToken.RefreshToken
+	u.RefreshSecret = nokiaUser.RefreshToken
 	if err := u.Save(db); err != nil {
 		log.Errorf("saving user due to refresh token update: %v", err)
 	}

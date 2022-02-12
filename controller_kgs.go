@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/pdbogen/vator/models"
+	"github.com/asymmetricia/vator/models"
 	"go.etcd.io/bbolt"
 
 	"net/http"

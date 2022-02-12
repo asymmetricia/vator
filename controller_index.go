@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/jrmycanady/nokiahealth"
-	"github.com/pdbogen/vator/models"
+	"github.com/asymmetricia/nokiahealth"
+	"github.com/asymmetricia/vator/models"
 	"go.etcd.io/bbolt"
 )
 

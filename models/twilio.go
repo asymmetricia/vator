@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	. "github.com/pdbogen/vator/log"
+	. "github.com/asymmetricia/vator/log"
 	"io"
 	"io/ioutil"
 	"net/http"

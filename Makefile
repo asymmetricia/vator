@@ -33,7 +33,7 @@ push-prod: .push-prod
 	touch .docker-prod
 
 vator: ${shell find -name \*.go} ${shell find templates} ${shell find static/css} static/js/graph.js
-	#go fmt github.com/pdbogen/vator/...
+	#go fmt github.com/asymmetricia/vator/...
 	CGO_ENABLED=0 go build -o vator
 
 tail:

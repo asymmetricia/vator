@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jrmycanady/nokiahealth"
-	. "github.com/pdbogen/vator/log"
-	"github.com/pdbogen/vator/models"
+	"github.com/asymmetricia/nokiahealth"
+	. "github.com/asymmetricia/vator/log"
+	"github.com/asymmetricia/vator/models"
 	"go.etcd.io/bbolt"
 	"golang.org/x/crypto/acme/autocert"
 )

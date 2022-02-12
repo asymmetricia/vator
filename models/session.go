@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	. "github.com/pdbogen/vator/log"
+	. "github.com/asymmetricia/vator/log"
 	"go.etcd.io/bbolt"
 )
 
