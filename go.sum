@@ -66,6 +66,8 @@ github.com/asymmetricia/withings v1.1.1 h1:XGSUtlxzPG2dCOU7b+6EdgutU8oxrwwJ/OH9d
 github.com/asymmetricia/withings v1.1.1/go.mod h1:KYNwnTw6HZA3/7uL9WiCHc8M2uzurKfxasO/CVEjBh4=
 github.com/asymmetricia/withings v1.2.0 h1:dVxjgzcSoI7OeAdOCQWHN6m9OPvv8pDQzb3X0cdRP/U=
 github.com/asymmetricia/withings v1.2.0/go.mod h1:KYNwnTw6HZA3/7uL9WiCHc8M2uzurKfxasO/CVEjBh4=
+github.com/asymmetricia/withings v1.3.0 h1:UCDEEVvQ86ZAACnrirO4B65F2OaKVx0yMyCr+Cb45iI=
+github.com/asymmetricia/withings v1.3.0/go.mod h1:KYNwnTw6HZA3/7uL9WiCHc8M2uzurKfxasO/CVEjBh4=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=

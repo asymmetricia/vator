@@ -55,12 +55,19 @@ type Weight struct {
 
 var UserNotFound = errors.New("user not found")
 
-func (u *User) NokiaUser(client *withings.Client) (*withings.User, error) {
+func (u *User) WithingsUser(db *bbolt.DB, client *withings.Client) (*withings.User, error) {
 	if u.RefreshSecret == "" {
 		return nil, errors.New("not linked")
 	}
 
-	return client.NewUserFromAccessToken(context.Background(), u.AccessToken, u.TokenExpiry, u.RefreshSecret)
+	wtu, err := client.NewUserFromAccessToken(context.Background(), u.AccessToken, u.TokenExpiry, u.RefreshSecret)
+	if err != nil {
+		return nil, fmt.Errorf("could not obtain access token in WithingsUser: %w", err)
+	}
+
+	u.SaveOauthTokens(db, wtu)
+
+	return wtu, nil
 }
 
 func LoadUserRequest(db *bbolt.DB, req *http.Request) (*User, error) {
@@ -214,14 +221,18 @@ func GetUsers(db *bbolt.DB) []*User {
 	return users
 }
 
-func (u *User) SaveRefreshToken(db *bbolt.DB, user *withings.User) {
-	if user.RefreshToken == u.RefreshSecret {
-		log.Debugf("user %q refresh token unchanged", u.Username)
+func (u *User) SaveOauthTokens(db *bbolt.DB, user *withings.User) {
+	if user.OauthToken.RefreshToken == u.RefreshSecret &&
+		user.OauthToken.AccessToken == u.AccessToken &&
+		user.OauthToken.Expiry == u.TokenExpiry {
+		log.Debugf("user %q oauth tokens unchanged", u.Username)
 		return
 	}
 
 	log.Debugf("saving updated refresh secret for user %q", u.Username)
-	u.RefreshSecret = user.RefreshToken
+	u.RefreshSecret = user.OauthToken.RefreshToken
+	u.AccessToken = user.OauthToken.AccessToken
+	u.TokenExpiry = user.OauthToken.Expiry
 	if err := u.Save(db); err != nil {
 		log.Errorf("saving user due to refresh token update: %v", err)
 	}
@@ -233,7 +244,7 @@ func (u *User) GetWeights(db *bbolt.DB, wtClient *withings.Client,
 	Log.Debugf("getting weights for %q from %s to %s", u.Username,
 		from, to)
 
-	user, err := u.NokiaUser(wtClient)
+	user, err := u.WithingsUser(db, wtClient)
 
 	var measuresResp withings.BodyMeasuresResp
 
@@ -241,7 +252,7 @@ func (u *User) GetWeights(db *bbolt.DB, wtClient *withings.Client,
 		measuresResp, err = user.GetBodyMeasures(&withings.BodyMeasuresQueryParams{
 			StartDate: &from,
 			EndDate:   &to})
-		u.SaveRefreshToken(db, user)
+		u.SaveOauthTokens(db, user)
 	}
 
 	if err != nil {

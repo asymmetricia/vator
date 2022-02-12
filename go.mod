@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/BurntSushi/toml v1.0.0 // indirect
-	github.com/asymmetricia/withings v1.2.0
+	github.com/asymmetricia/withings v1.3.0
 	github.com/cbroglie/mustache v1.3.1
 	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
