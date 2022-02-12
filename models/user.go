@@ -60,7 +60,7 @@ func (u *User) NokiaUser(client *withings.Client) (*withings.User, error) {
 		return nil, errors.New("not linked")
 	}
 
-	return client.NewUserFromRefreshToken(context.Background(), u.RefreshSecret)
+	return client.NewUserFromAccessToken(context.Background(), u.AccessToken, u.TokenExpiry, u.RefreshSecret)
 }
 
 func LoadUserRequest(db *bbolt.DB, req *http.Request) (*User, error) {
