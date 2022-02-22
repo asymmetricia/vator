@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/asymmetricia/vator/models"
 	"go.etcd.io/bbolt"
@@ -31,7 +32,7 @@ func SignupHandlerGet(db *bbolt.DB, rw http.ResponseWriter, req *http.Request) {
 
 func SignupHandlerPost(db *bbolt.DB) func(w http.ResponseWriter, r *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		username := req.Form.Get("username")
+		username := strings.ToLower(req.Form.Get("username"))
 		password := req.Form.Get("password")
 		confirm := req.Form.Get("confirm")
 		_, err := models.LoadUser(db, username)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/asymmetricia/vator/log"
@@ -47,7 +48,7 @@ func Data(db *bbolt.DB) func(rw http.ResponseWriter, req *http.Request) {
 			if err != nil {
 				err = fmt.Errorf("user %q is not shared, and request is "+
 					"unauthenticated: %w", user.Username, err)
-			} else if user.Username != currentUser {
+			} else if strings.ToLower(user.Username) != strings.ToLower(currentUser) {
 				err = fmt.Errorf("user %q is not shared, and does not belong "+
 					"to %q", user.Username, currentUser)
 			}

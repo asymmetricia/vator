@@ -80,7 +80,7 @@ func LoginHandlerPost(db *bbolt.DB) func(http.ResponseWriter, *http.Request) {
 		invalid := func() {
 			http.Error(rw, "The username or password you provided was invalid.", http.StatusBadRequest)
 		}
-		user, err := models.LoadUser(db, req.Form.Get("username"))
+		user, err := models.LoadUser(db, strings.ToLower(req.Form.Get("username")))
 		if errors.Is(err, models.UserNotFound) {
 			invalid()
 			return
