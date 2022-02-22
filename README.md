@@ -11,4 +11,4 @@ informing you of positive progress related to movement against a 5-day and 30-da
 * [x] set up notification
 * [x] receive notification (edge-trigger a scan?)
 * [x] scheduled scan (minutely looks safe from ratelimit perspective)
-
+* [ ] gainz mode
