@@ -2,39 +2,23 @@
 
 IMAGE_URL ?= 248174752766.dkr.ecr.us-west-1.amazonaws.com/vator
 
-restart: .push
+restart: .docker
 	ssh admin@mapbot.cernu.us sudo systemctl restart vator-dev
 
-push: .push
-.push: .docker
+.docker: Dockerfile run.sh ${shell find -name \*.go} static/js/graph.js
 	@ set -e; \
 	eval "$$(aws --region=us-west-1 ecr get-login --no-include-email)" && \
-	docker push ${IMAGE_URL}-dev && \
-	touch .push
-
-.docker: vator Dockerfile run.sh
-	docker build --pull -t vator .
-	docker tag vator ${IMAGE_URL}-dev
+	docker buildx build --push --platform linux/amd64,linux/arm64 --pull -t ${IMAGE_URL}-dev .
 	touch .docker
 
-restart-prod: .push-prod
-	ssh admin@mapbot.cernu.us sudo systemctl restart vator
-
-push-prod: .push-prod
-.push-prod: .docker-prod
+.docker_prod:
 	@ set -e; \
 	eval "$$(aws --region=us-west-1 ecr get-login --no-include-email)" && \
-	docker push ${IMAGE_URL} && \
-	touch .push-prod
-
-.docker-prod: vator Dockerfile run.sh
-	docker build --pull -t vator .
-	docker tag vator ${IMAGE_URL}
-	touch .docker-prod
-
-vator: ${shell find -name \*.go} ${shell find templates} ${shell find static/css} static/js/graph.js go.mod go.sum
-	#go fmt github.com/asymmetricia/vator/...
-	CGO_ENABLED=0 go build -o vator
+	docker buildx build --push --platform linux/amd64,linux/arm64 --pull -t ${IMAGE_URL} .
+	touch .docker_prod
+	
+restart-prod: .docker_prod
+	ssh admin@mapbot.cernu.us sudo systemctl restart vator
 
 tail:
 	ssh admin@mapbot.cernu.us journalctl -u vator-dev -f
@@ -49,4 +33,4 @@ static/js/graph.js: ${shell find static/js -name \*.ts}
 	./build-js.sh
 
 clean:
-	$(RM) .docker .push-prod .docker-prod static/js/graph.js
+	$(RM) .docker .docker_prod static/js/graph.js

@@ -4,5 +4,6 @@
 /vator
 /vator.db
 /.docker
+/.docker_prod
 /.push
 node_modules
