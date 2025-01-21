@@ -46,16 +46,7 @@ reset-dev:
 	ssh admin@mapbot.cernu.us sudo systemctl restart vator-dev
 
 static/js/graph.js: ${shell find static/js -name \*.ts}
-	printf 'FROM node:16\nRUN npm install typescript -g\nRUN npm install ts-node -g' | docker build -t tsc -
-	docker run -it -v "$$PWD/static/js:/work" -w /work -u $$(id -u) tsc \
-		tsc -t es2015 -m commonjs graph.ts
-	docker run -it -v "$$PWD/static/js:/work" -w /work -u $$(id -u) tsc \
-		ts-node \
-			-O '{"target":"es2015"}' \
-			test.ts
-	docker run -it -v "$$PWD/static/js:/work" -w /work -u $$(id -u) tsc \
-		tsc \
-			-t es2015 \
-			-m es2015 \
-			--strict \
-			graph.ts
+	./build-js.sh
+
+clean:
+	$(RM) .docker .push-prod .docker-prod static/js/graph.js

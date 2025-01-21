@@ -5,3 +5,4 @@
 /vator.db
 /.docker
 /.push
+node_modules
